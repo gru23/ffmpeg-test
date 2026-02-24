@@ -7,6 +7,9 @@
       "expo-asset",
       "expo-font",
       "expo-web-browser"
-    ]
+    ],
+    "android": {
+      "package": "com.gru23.FFmpeg_1"
+    }
   }
 }

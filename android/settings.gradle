@@ -31,7 +31,7 @@ extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
 }
 expoAutolinking.useExpoModules()
 
-rootProject.name = 'FFmpeg1'
+rootProject.name = 'FFmpeg_1'
 
 expoAutolinking.useExpoVersionCatalog()
 

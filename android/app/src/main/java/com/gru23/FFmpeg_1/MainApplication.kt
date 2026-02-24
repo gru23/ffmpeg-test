@@ -1,4 +1,4 @@
-package com.ffmpeg1
+package com.gru23.FFmpeg_1
 
 import android.app.Application
 import android.content.res.Configuration
