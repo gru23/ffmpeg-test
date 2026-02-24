@@ -152,6 +152,8 @@ android {
     }
 }
 
+repositories { flatDir { dirs 'libs' } }
+
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
@@ -179,4 +181,8 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+
+    implementation files('libs/ffmpeg-kit-full-6.0-2.LTS.aar')
+    implementation files('libs/smart-exception-java-0.2.1.jar')
+    implementation files('libs/smart-exception-common-0.2.1.jar')
 }
