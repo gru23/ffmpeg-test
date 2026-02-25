@@ -9,12 +9,14 @@ import { FFmpegKit } from 'ffmpeg-kit-react-native';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Asset } from 'expo-asset';
+import FiltersScreen from './src/screens/FiltersScreen';
 
 const Stack = createNativeStackNavigator();
 
 type RootStackParamList = {
   Home: undefined;
   Login: undefined;
+  Filters: undefined;
 };
 
 type HomeScreenProps = {
@@ -95,6 +97,7 @@ function HomeScreen({ navigation }: HomeScreenProps) {
       <Button title='Login' onPress={() => navigation.navigate('Login')} />
       <Text>Open up App.js to start working on your app!</Text>
       <Text>Radi li?</Text>
+      <Button title='Filters' onPress={() => navigation.navigate('Filters')} />
 
       <Text>MP3 Player Demo</Text>
       <Button title="▶️ Pusti Original" onPress={playOriginal} />
@@ -116,6 +119,7 @@ export default function App() {
       <Stack.Navigator>
         <Stack.Screen name='Home' component={HomeScreen}/>
         <Stack.Screen name='Login' component={LoginScreen} />
+        <Stack.Screen name='Filters' component={FiltersScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
