@@ -10,6 +10,7 @@ import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Asset } from 'expo-asset';
 import FiltersScreen from './src/screens/FiltersScreen';
+import VisualScreen from './src/screens/VisualScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -17,6 +18,7 @@ type RootStackParamList = {
   Home: undefined;
   Login: undefined;
   Filters: undefined;
+  Visual: undefined;
 };
 
 type HomeScreenProps = {
@@ -108,6 +110,7 @@ function HomeScreen({ navigation }: HomeScreenProps) {
       <TouchableOpacity onPress={() => navigation.navigate('Login')}>
         <Text style={styles.login}>Sign in</Text>
       </TouchableOpacity>
+      <Button title='Visual' onPress={() => navigation.navigate('Visual')} />
       <StatusBar style='auto' />
     </View>
   );
@@ -120,6 +123,7 @@ export default function App() {
         <Stack.Screen name='Home' component={HomeScreen}/>
         <Stack.Screen name='Login' component={LoginScreen} />
         <Stack.Screen name='Filters' component={FiltersScreen} />
+        <Stack.Screen name='Visual' component={VisualScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
