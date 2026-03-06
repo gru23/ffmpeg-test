@@ -11,6 +11,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { Asset } from 'expo-asset';
 import FiltersScreen from './src/screens/FiltersScreen';
 import VisualScreen from './src/screens/VisualScreen';
+import SkiaVisualScreen from './src/screens/SkiaVisualScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -19,6 +20,7 @@ type RootStackParamList = {
   Login: undefined;
   Filters: undefined;
   Visual: undefined;
+  Skia: undefined;
 };
 
 type HomeScreenProps = {
@@ -111,6 +113,7 @@ function HomeScreen({ navigation }: HomeScreenProps) {
         <Text style={styles.login}>Sign in</Text>
       </TouchableOpacity>
       <Button title='Visual' onPress={() => navigation.navigate('Visual')} />
+        <Button title='Skia Visual' onPress={() => navigation.navigate('Skia')} />
       <StatusBar style='auto' />
     </View>
   );
@@ -124,6 +127,7 @@ export default function App() {
         <Stack.Screen name='Login' component={LoginScreen} />
         <Stack.Screen name='Filters' component={FiltersScreen} />
         <Stack.Screen name='Visual' component={VisualScreen} />
+        <Stack.Screen name='Skia' component={SkiaVisualScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
