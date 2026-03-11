@@ -34,14 +34,48 @@ function HomeScreen({ navigation }: HomeScreenProps) {
   const copyInputAsset = useCallback(async () => {
     const asset = Asset.fromModule(require('./assets/input.wav'));
     await asset.downloadAsync();
+    // inputBD_44.1_16b_5s.wav inputBD_8kHz_8b_5s.wav inputBD.wav
+    const fileName = "inputBD_44.1_16b_5s.wav";
+    const fileName1 = "inputBD_8kHz_8b_5s.wav";
+    const fileName2 = "inputBD.wav";
+    const finalFileName = fileName2;
+
+    const assetBD = Asset.fromModule(require('./assets/' + finalFileName));
+    await assetBD.downloadAsync();
 
     const destPath = FileSystem.documentDirectory + 'input.wav';
     const sourceUri = asset.localUri ?? asset.uri;
+
+    const destPathBD = FileSystem.documentDirectory + finalFileName;
+    const sourceUriBD = assetBD.localUri ?? assetBD.uri;
+
+    // Always replace sandbox copies so selected file is guaranteed to be current.
+    await FileSystem.deleteAsync(destPathBD, { idempotent: true });
 
     await FileSystem.copyAsync({ from: sourceUri, to: destPath });
     setInputPath(destPath);
     setIsInputReady(true);
     console.log('Asset kopiran u:', destPath);
+
+    // await FileSystem.copyAsync({ from: sourceUriBD, to: destPathBD });
+    // setInputPath(destPathBD);
+    // setIsInputReady(true);
+    // console.log('Asset kopiran u:', destPathBD);
+
+    // kopiraj inputBD.wav u sandbox
+    await FileSystem.copyAsync({ from: sourceUriBD, to: destPathBD });
+    console.log('Asset kopiran u:', destPathBD);
+
+    // odmah ga degradiraj na 8‑bit / 8 kHz
+    const degradedPath = FileSystem.documentDirectory + 'inputBD_degraded.wav';
+    await FileSystem.deleteAsync(degradedPath, { idempotent: true });
+    const ffmpegCommand = `-y -i ${destPathBD} -ac 2 -ar 8000 -acodec pcm_u8 ${degradedPath}`;
+    await FFmpegKit.execute(ffmpegCommand);
+
+    // koristi degradirani fajl za vizualizaciju
+    setInputPath(degradedPath);
+    setIsInputReady(true);
+    console.log('Degradirani asset spreman u:', degradedPath);
   }, []);
 
   useEffect(() => {
@@ -95,6 +129,16 @@ function HomeScreen({ navigation }: HomeScreenProps) {
     }
   }
 
+  async function listFiles() {
+    try {
+      const path = FileSystem.documentDirectory === null ? "" : FileSystem.documentDirectory;
+      const files = await FileSystem.readDirectoryAsync(path);
+      console.log("Sadržaj sandboxa:", files);
+    } catch (error) {
+      console.log("Greška:", error);
+    }
+  }
+
   return(
     <View style={styles.container}>
       <Text>Dobrodošli na početnu stranicu!</Text>
@@ -114,6 +158,7 @@ function HomeScreen({ navigation }: HomeScreenProps) {
       </TouchableOpacity>
       <Button title='Visual' onPress={() => navigation.navigate('Visual')} />
         <Button title='Skia Visual' onPress={() => navigation.navigate('Skia')} />
+      <Button title='Sandbox' onPress={listFiles} />
       <StatusBar style='auto' />
     </View>
   );

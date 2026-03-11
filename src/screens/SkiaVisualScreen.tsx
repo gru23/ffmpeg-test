@@ -4,9 +4,11 @@ import React, { useEffect, useState, useRef } from "react";
 import * as FileSystem from 'expo-file-system/legacy';
 import { FFmpegKit, FFprobeKit } from "ffmpeg-kit-react-native";
 import { Buffer } from "buffer";
+import { Dimensions } from "react-native";
 
 export default function SkiaVisualScreen() {
   const refWaveScaleY = useRef(1.5);
+  const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
   const [waveformPath, setWaveformPath] = useState<any>(null);
   const [rightWaveformPath, setRightWaveformPath] = useState<any>(null);
@@ -15,8 +17,8 @@ export default function SkiaVisualScreen() {
   const [zoomFactor, setZoomFactor] = useState(1);
   
 
-  const width = 350;
-  const height = 250;
+  const width = screenWidth - 40;//350;
+  const height = screenHeight / 6;//150;
 
   // učitaj font iz assets foldera
   const font = useFont(require("../../assets/Roboto-Regular.ttf"), 12);
@@ -70,8 +72,8 @@ export default function SkiaVisualScreen() {
 
   async function extractPCM() {
       try {
-        const inputPath = FileSystem.documentDirectory + "input.wav";
-        const pcmPath = FileSystem.documentDirectory + "output.pcm";
+        const inputPath = FileSystem.documentDirectory + "inputBD_degraded.wav"// "input.wav";
+        const pcmPath = FileSystem.documentDirectory + "outputBD_degraded.wav"; // "output.pcm";
 
         const infoCommand = `-i ${inputPath} -select_streams a:0 -show_entries stream=channels,sample_rate,duration,codec_name,bits_per_sample -of default=noprint_wrappers=1`;
         const session = await FFprobeKit.execute(infoCommand);
@@ -90,7 +92,7 @@ export default function SkiaVisualScreen() {
         const codecShort = codecName.replace("pcm_", "");
         const bitsPerSample = bitsPerSampleMatch ? parseInt(bitsPerSampleMatch[1], 10) : 16;
 
-        const pcmCommand = `-i ${inputPath} -f ${codecShort} -acodec ${codecName} ${pcmPath}`;
+        const pcmCommand = `-y -i ${inputPath} -f ${codecShort} -acodec ${codecName} ${pcmPath}`;
         // console.log('Ispis komande: ', `-i ${inputPath} -f ${codecShort} -acodec ${codecName} ${pcmPath}`);
         console.log(`${channels} ${sampleRate} ${duration} ${codecName} ${codecShort} ${bitsPerSample}`);
         // console.log(`Is null?! ${channelsMatch}`);
@@ -117,15 +119,21 @@ export default function SkiaVisualScreen() {
           }
         }
 
-        const leftDown = leftChannel.filter((_, i) => i % 100 === 0);
+        const leftDown = leftChannel.filter((_, i) => i % 5 === 0);
         const rightDown = rightChannel.filter((_, i) => i % 100 === 0);
 
         const leftPath = createWaveformPath(leftDown, width, height, 0);
         setWaveformPath(leftPath);
 
+        leftChannel.length = 0;
+        leftDown.length = 0;
+
         if (channels == 2) {
-          const rightPath = createWaveformPath(rightDown, width, height, height / 3);
+          const rightPath = createWaveformPath(rightDown, width, height, height);
           setRightWaveformPath(rightPath);
+
+          rightChannel.length = 0;
+          rightDown.length = 0;
         }
       } catch (err) {
         console.error("Greška pri ekstrakciji PCM:", err);
@@ -140,12 +148,12 @@ export default function SkiaVisualScreen() {
     <View style={styles.container}>
       {waveformPath && font ? (
         <>
-          <Canvas style={{ width: width, height: height * 2 + 40 }}>
+          <Canvas style={{ width: width, height: height * 3 + 60 }}>
             <Path
               path={waveformPath}
               color="blue"
               style="stroke"
-              strokeWidth={1}
+              strokeWidth={0.1}
               transform={[{ scaleX: zoomFactor }, { scaleY: refWaveScaleY.current }]}
             />
             {rightWaveformPath && (
@@ -153,29 +161,53 @@ export default function SkiaVisualScreen() {
                 path={rightWaveformPath}
                 color="red"
                 style="stroke"
-                strokeWidth={0.25}
+                strokeWidth={0.1}
                 transform={[{ scaleX: zoomFactor }, { scaleY: refWaveScaleY.current }]}
               />
             )}
 
             {/* X osa sa oznakama vremena */}
-            {Array.from({ length: Math.floor(durationInSeconds) + 1 }).map((_, s) => {
+            {(() => {
+              const desiredTickSpacingPx = 50; // razmak u pikselima
               const pixelsPerSecond = width / durationInSeconds;
-              const x = s * pixelsPerSecond * zoomFactor; // skalirano po zoomFactor
-              const tickPath = Skia.Path.Make();
-              tickPath.moveTo(x, height * 2);
-              tickPath.lineTo(x, height * 2 + 5);
-              return (
-                <React.Fragment key={`tick-${s}`}>
-                  <Path path={tickPath} color="black" style="stroke" strokeWidth={1} />
-                  <SkiaText text={`${s}s`} x={x} y={height * 2 + 20} font={font} color="black" />
-                </React.Fragment>
-              );
-            })}
-          </Canvas>
 
+              // odredi korak u sekundama tako da bude uredan broj
+              // npr. 1s, 2s, 5s, 10s – zavisi od širine i trajanja
+              let step = Math.ceil(durationInSeconds / (width / desiredTickSpacingPx));
+
+              // za zoom možeš smanjiti korak
+              if (zoomFactor >= 2) step = Math.max(0.5, step / 2);
+              if (zoomFactor >= 4) step = Math.max(0.25, step / 4);
+
+              const axisEndSeconds = Math.ceil(durationInSeconds);
+              const ticks = Array.from({ length: Math.floor(axisEndSeconds / step) + 1 });
+
+              return ticks.map((_, s) => {
+                const time = s * step;
+                const x = time * pixelsPerSecond * zoomFactor;
+
+                const tickPath = Skia.Path.Make();
+                tickPath.moveTo(x, height * 3 + 10);
+                tickPath.lineTo(x, height * 3 + 15);
+
+                // zaokruženi brojevi
+                const label = time.toFixed(2);
+
+                const textWidth = font?.measureText(label).width ?? 0;
+                const textX = Math.max(0, x - textWidth / 2);
+
+                return (
+                  <React.Fragment key={`tick-${s}`}>
+                    <Path path={tickPath} color="black" style="stroke" strokeWidth={1} />
+                    <SkiaText text={label} x={textX} y={height * 3 + 30} font={font} color="black" />
+                  </React.Fragment>
+                );
+              });
+            })()}
+
+          </Canvas>
           {/* Dugmad za zoom */}
-          <View style={{ flexDirection: "row", marginTop: 10 }}>
+          <View style={{ flexDirection: "row", marginTop: 5 }}>
             <Button title="+" onPress={() => setZoomFactor((z) => z * 1.2)} />
             <View style={{ width: 10 }} />
             <Button title="-" onPress={() => setZoomFactor((z) => Math.max(1, z / 1.2))} />
