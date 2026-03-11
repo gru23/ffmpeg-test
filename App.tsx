@@ -12,6 +12,7 @@ import { Asset } from 'expo-asset';
 import FiltersScreen from './src/screens/FiltersScreen';
 import VisualScreen from './src/screens/VisualScreen';
 import SkiaVisualScreen from './src/screens/SkiaVisualScreen';
+import SourceSeparationPlayerScreen from './src/screens/sourceSeparation/SourceSeparationPlayerScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -21,6 +22,7 @@ type RootStackParamList = {
   Filters: undefined;
   Visual: undefined;
   Skia: undefined;
+  SourceSeparation: undefined;
 };
 
 type HomeScreenProps = {
@@ -159,6 +161,7 @@ function HomeScreen({ navigation }: HomeScreenProps) {
       <Button title='Visual' onPress={() => navigation.navigate('Visual')} />
         <Button title='Skia Visual' onPress={() => navigation.navigate('Skia')} />
       <Button title='Sandbox' onPress={listFiles} />
+      <Button title='SourceSeparation' onPress={() => navigation.navigate('SourceSeparation')} />
       <StatusBar style='auto' />
     </View>
   );
@@ -173,6 +176,7 @@ export default function App() {
         <Stack.Screen name='Filters' component={FiltersScreen} />
         <Stack.Screen name='Visual' component={VisualScreen} />
         <Stack.Screen name='Skia' component={SkiaVisualScreen} />
+        <Stack.Screen name='SourceSeparation' component={SourceSeparationPlayerScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
