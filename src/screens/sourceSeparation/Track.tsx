@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native';
 import React, { useEffect, useState, useRef } from 'react';
 import { Sound } from 'expo-av/build/Audio';
 import { Waveform, type IWaveformRef } from '@simform_solutions/react-native-audio-waveform';
@@ -11,9 +11,11 @@ type TrackProps = {
   volume: number;
   audioPath: string;
   onVolumeChange: (index: number, volume: number) => void;
+  icon: any;
+  muteIcon: any;
 };
 
-export default function Track({ name, sound, index, volume, audioPath, onVolumeChange }: TrackProps) {
+export default function Track({ name, sound, index, volume, audioPath, onVolumeChange, icon, muteIcon }: TrackProps) {
   const [volumeValue, setVolumeValue] = useState<number>(volume);
   const [muteButton, setMuteButton] = useState<string>("Mute");
   const [sliderValue, setSliderValue] = useState<number>(volume * 100);
@@ -61,18 +63,25 @@ export default function Track({ name, sound, index, volume, audioPath, onVolumeC
       <Text style={styles.volumeText}>Vol: {Math.round(volumeValue * 100)}%</Text>
 
       <View style={styles.inputRow}>
+        <TouchableOpacity onPress={() => muteVolume()}>
+          <Image 
+          source={volumeValue === 0 ? muteIcon : icon} 
+          // style={{ width: 36, height: 36, marginRight: 10 }} 
+          style={{ marginRight: 0 }} //original icon size
+        />
+        </TouchableOpacity>
+        
         <Slider
-          style={{width: 250, height: 10}}
+          style={{ flex:1, height: 10, marginHorizontal: 10}}
           minimumValue={0}
           maximumValue={100}
           value={sliderValue}
-          onValueChange={handleSliderChange}
+          onValueChange={handleSliderChange}  // makes a problem for lastVolumeRef because calls handleSliderChange many times
+          //onSlidingComplete={handleSliderChange}  // no problem with lastVolumeRef, but does not change volume during a slide, just on release
           minimumTrackTintColor="#1DB954"
           maximumTrackTintColor="#ccc"
+          thumbTintColor='red'
         />
-        <TouchableOpacity style={styles.muteButton} onPress={() => muteVolume()}>
-          <Text style={styles.muteText}>{ muteButton }</Text>
-        </TouchableOpacity>
       </View>
 
       <Waveform
@@ -120,24 +129,6 @@ const styles = StyleSheet.create({
     width: 60,
     marginRight: 10,
     textAlign: 'center',
-  },
-  confirmButton: {
-    backgroundColor: '#1DB954',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 20,
-  },
-  confirmText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  muteButton: {
-    backgroundColor: '#e53935',
-    paddingVertical: 8,
-    borderRadius: 20,
-    alignItems: 'center',
-    marginLeft: 10,
-    paddingHorizontal: 15,
   },
   muteText: {
     color: '#fff',

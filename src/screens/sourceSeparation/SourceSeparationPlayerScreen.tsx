@@ -5,6 +5,7 @@ import { Sound } from 'expo-av/build/Audio';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import Track from './Track';
+import { ICONS } from '../../constants/icons';
 
 export default function SourceSeparationPlayerScreen() {
   const [stems, setStems] = useState<Sound[]>([]);
@@ -87,6 +88,8 @@ export default function SourceSeparationPlayerScreen() {
             volume={0.5}
             audioPath={(FileSystem.documentDirectory + names[i].toLowerCase() + '.wav').replace('file://', '')}
             onVolumeChange={setVolume}
+            icon={ICONS[names[i].toLowerCase()].normal}
+            muteIcon={ICONS[names[i].toLowerCase()].mute}
             />
         ))}
       </ScrollView>
