@@ -9,6 +9,7 @@ import { ICONS } from '../../constants/icons';
 
 export default function SourceSeparationPlayerScreen() {
   const [stems, setStems] = useState<Sound[]>([]);
+  const [currentPosition, setCurrentPosition] = useState<number>(0);
   const names = ['Vocals', 'Drums', 'Other', 'Bass'];
 
   useEffect(() => {
@@ -35,6 +36,19 @@ export default function SourceSeparationPlayerScreen() {
     };
   }, []);
 
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (stems.length > 0) {
+        const status = await stems[0].getStatusAsync(); 
+        if (status.isLoaded && status.isPlaying) {
+          setCurrentPosition(status.positionMillis);
+        }
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [stems]);
+
   const copyStems = useCallback(async () => {
     const assets = [
       Asset.fromModule(require('../../../assets/vocals.wav')),
@@ -57,6 +71,7 @@ export default function SourceSeparationPlayerScreen() {
     await Promise.all(stems.map(stem => stem.pauseAsync()));
     await Promise.all(stems.map(stem => stem.setPositionAsync(0)));
     await Promise.all(stems.map(stem => stem.setVolumeAsync(0.5)));
+    setCurrentPosition(0);
   };
 
   const setVolume = async (index: number, volume: number) => {
@@ -90,6 +105,7 @@ export default function SourceSeparationPlayerScreen() {
             onVolumeChange={setVolume}
             icon={ICONS[names[i].toLowerCase()].normal}
             muteIcon={ICONS[names[i].toLowerCase()].mute}
+            currentPosition={currentPosition}
             />
         ))}
       </ScrollView>

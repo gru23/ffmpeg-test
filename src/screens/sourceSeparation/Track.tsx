@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Image, Animated } from 'react-native';
 import React, { useEffect, useState, useRef } from 'react';
 import { Sound } from 'expo-av/build/Audio';
 import { Waveform, type IWaveformRef } from '@simform_solutions/react-native-audio-waveform';
@@ -13,19 +13,43 @@ type TrackProps = {
   onVolumeChange: (index: number, volume: number) => void;
   icon: any;
   muteIcon: any;
+  currentPosition: number;
 };
 
-export default function Track({ name, sound, index, volume, audioPath, onVolumeChange, icon, muteIcon }: TrackProps) {
+export default function Track({ name, sound, index, volume, audioPath, onVolumeChange, icon, muteIcon, currentPosition }: TrackProps) {
   const [volumeValue, setVolumeValue] = useState<number>(volume);
   const [muteButton, setMuteButton] = useState<string>("Mute");
   const [sliderValue, setSliderValue] = useState<number>(volume * 100);
+  const [duration, setDuration] = useState<number>(0);
 
   const lastVolumeRef = useRef<number>(volume);
   const waveformRef = useRef<IWaveformRef>(null);
+  const animatedProgressRef = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     onVolumeChange(index, volumeValue);
   }, [volumeValue]);
+
+  useEffect(() => {
+    const getDuration = async () => {
+      const status = await sound.getStatusAsync();
+      if (status.isLoaded) {
+        setDuration(status.durationMillis || 0);
+      }
+    };
+    getDuration();
+  }, [sound]);
+
+  useEffect(() => {
+    if (duration > 0) {
+      const percentage = (currentPosition / duration) * 100;
+      Animated.timing(animatedProgressRef, {
+        toValue: percentage,
+        duration: 50,
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [currentPosition, duration]);
 
   const setVolume = async (value: number) => {
     if(value === 0)
@@ -39,12 +63,14 @@ export default function Track({ name, sound, index, volume, audioPath, onVolumeC
 
   const muteVolume = async () => {
     if("Mute" === muteButton) {
+      // waveformRef.current?.resumePlayer();
       setMuteButton("Unmute");
       lastVolumeRef.current = volumeValue;
       setVolumeValue(0);
       setSliderValue(0);
     }
     else {
+      // waveformRef.current?.pausePlayer();
       setMuteButton("Mute");
       setVolumeValue(lastVolumeRef.current);
       setSliderValue(lastVolumeRef.current * 100);
@@ -84,19 +110,37 @@ export default function Track({ name, sound, index, volume, audioPath, onVolumeC
         />
       </View>
 
-      <Waveform
-        mode="static"
-        ref={waveformRef}
-        path={audioPath}
-        candleWidth={3}
-        candleSpace={2}
-        waveColor="#fff"
-        scrubColor="red"
-        containerStyle={styles.waveformContainer}
-        onCurrentProgressChange={(current, duration) => {
-            // console.log('Current:', current, 'Duration:', duration);
-        }}
-      />
+      <View style={styles.waveformWrapper}>
+        <Waveform
+          mode="static"
+          ref={waveformRef}
+          path={audioPath}
+          candleWidth={3}
+          candleSpace={2}
+          waveColor="#fff"
+          scrubColor="red"
+          containerStyle={styles.waveformContainer}
+          onCurrentProgressChange={(current, duration) => {
+            // Ovdje možeš obraditi progress
+            // npr. promijeniti boju dijela waveforma
+            // waveformRef.current?.resumePlayer();
+            console.log('Current:', current, 'Duration:', duration);
+          }}
+        />
+        {duration > 0 && (
+          <Animated.View
+            style={[
+              styles.progressIndicator,
+              {
+                left: animatedProgressRef.interpolate({
+                  inputRange: [0, 100],
+                  outputRange: ['0%', '100%'],
+                }),
+              },
+            ]}
+          />
+        )}
+      </View>
     </View>
   );
 }
@@ -138,5 +182,17 @@ const styles = StyleSheet.create({
     height: 100,
     width: '100%',
     marginTop: 10,
+  },
+  waveformWrapper: {
+    position: 'relative',
+    marginTop: 10,
+  },
+  progressIndicator: {
+    position: 'absolute',
+    top: 0,
+    width: 2,
+    height: 100,
+    backgroundColor: '#FF1744',
+    zIndex: 10,
   },
 });
