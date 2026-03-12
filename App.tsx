@@ -40,7 +40,7 @@ function HomeScreen({ navigation }: HomeScreenProps) {
     const fileName = "inputBD_44.1_16b_5s.wav";
     const fileName1 = "inputBD_8kHz_8b_5s.wav";
     const fileName2 = "inputBD.wav";
-    const finalFileName = fileName2;
+    const finalFileName = fileName;
 
     const assetBD = Asset.fromModule(require('./assets/' + finalFileName));
     await assetBD.downloadAsync();

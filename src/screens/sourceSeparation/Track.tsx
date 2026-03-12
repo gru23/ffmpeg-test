@@ -1,21 +1,25 @@
-import { StyleSheet, Text, View, TouchableOpacity, TextInput } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import React, { useEffect, useState, useRef } from 'react';
 import { Sound } from 'expo-av/build/Audio';
+import { Waveform, type IWaveformRef } from '@simform_solutions/react-native-audio-waveform';
+import Slider from '@react-native-community/slider';
 
 type TrackProps = {
   name: string;
   sound: Sound;
   index: number;
   volume: number;
+  audioPath: string;
   onVolumeChange: (index: number, volume: number) => void;
 };
 
-export default function Track({ name, sound, index, volume, onVolumeChange }: TrackProps) {
+export default function Track({ name, sound, index, volume, audioPath, onVolumeChange }: TrackProps) {
   const [volumeValue, setVolumeValue] = useState<number>(volume);
   const [muteButton, setMuteButton] = useState<string>("Mute");
-  const [inputValue, setInputValue] = useState<string>(String(volume * 100));
+  const [sliderValue, setSliderValue] = useState<number>(volume * 100);
 
   const lastVolumeRef = useRef<number>(volume);
+  const waveformRef = useRef<IWaveformRef>(null);
 
   useEffect(() => {
     onVolumeChange(index, volumeValue);
@@ -36,19 +40,19 @@ export default function Track({ name, sound, index, volume, onVolumeChange }: Tr
       setMuteButton("Unmute");
       lastVolumeRef.current = volumeValue;
       setVolumeValue(0);
+      setSliderValue(0);
     }
     else {
       setMuteButton("Mute");
       setVolumeValue(lastVolumeRef.current);
+      setSliderValue(lastVolumeRef.current * 100);
     }
   }
 
-  const confirmInput = () => {
-    let num = parseInt(inputValue, 10);
-    if (isNaN(num)) num = 0;
-    if (num < 0) num = 0;
-    if (num > 100) num = 100;
-    setVolume(num / 100);
+   const handleSliderChange = (val: number) => {
+    setSliderValue(val);
+    const normalized = val / 100;
+    setVolume(normalized);
   };
 
   return (
@@ -57,24 +61,33 @@ export default function Track({ name, sound, index, volume, onVolumeChange }: Tr
       <Text style={styles.volumeText}>Vol: {Math.round(volumeValue * 100)}%</Text>
 
       <View style={styles.inputRow}>
-        <TextInput
-          style={styles.input}
-          keyboardType="numeric"
-          value={inputValue}
-          onChangeText={setInputValue}
-          maxLength={3}
+        <Slider
+          style={{width: 250, height: 10}}
+          minimumValue={0}
+          maximumValue={100}
+          value={sliderValue}
+          onValueChange={handleSliderChange}
+          minimumTrackTintColor="#1DB954"
+          maximumTrackTintColor="#ccc"
         />
-        <TouchableOpacity style={styles.confirmButton} onPress={confirmInput}>
-          <Text style={styles.confirmText}>Set</Text>
-        </TouchableOpacity>
         <TouchableOpacity style={styles.muteButton} onPress={() => muteVolume()}>
-        <Text style={styles.muteText}>{ muteButton }</Text>
-      </TouchableOpacity>
+          <Text style={styles.muteText}>{ muteButton }</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* <TouchableOpacity style={styles.muteButton} onPress={() => muteVolume()}>
-        <Text style={styles.muteText}>{ muteButton }</Text>
-      </TouchableOpacity> */}
+      <Waveform
+        mode="static"
+        ref={waveformRef}
+        path={audioPath}
+        candleWidth={3}
+        candleSpace={2}
+        waveColor="#fff"
+        scrubColor="red"
+        containerStyle={styles.waveformContainer}
+        onCurrentProgressChange={(current, duration) => {
+            // console.log('Current:', current, 'Duration:', duration);
+        }}
+      />
     </View>
   );
 }
@@ -123,9 +136,16 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     alignItems: 'center',
+    marginLeft: 10,
+    paddingHorizontal: 15,
   },
   muteText: {
     color: '#fff',
     fontWeight: '600',
+  },
+  waveformContainer: {
+    height: 100,
+    width: '100%',
+    marginTop: 10,
   },
 });

@@ -85,6 +85,7 @@ export default function SourceSeparationPlayerScreen() {
             sound={stem}
             index={i}
             volume={0.5}
+            audioPath={(FileSystem.documentDirectory + names[i].toLowerCase() + '.wav').replace('file://', '')}
             onVolumeChange={setVolume}
             />
         ))}
