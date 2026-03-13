@@ -63,14 +63,12 @@ export default function Track({ name, sound, index, volume, audioPath, onVolumeC
 
   const muteVolume = async () => {
     if("Mute" === muteButton) {
-      // waveformRef.current?.resumePlayer();
       setMuteButton("Unmute");
       lastVolumeRef.current = volumeValue;
       setVolumeValue(0);
       setSliderValue(0);
     }
     else {
-      // waveformRef.current?.pausePlayer();
       setMuteButton("Mute");
       setVolumeValue(lastVolumeRef.current);
       setSliderValue(lastVolumeRef.current * 100);
@@ -86,7 +84,7 @@ export default function Track({ name, sound, index, volume, audioPath, onVolumeC
   return (
     <View style={styles.track}>
       <Text style={styles.trackName}>{name}</Text>
-      <Text style={styles.volumeText}>Vol: {Math.round(volumeValue * 100)}%</Text>
+      {/* <Text style={styles.volumeText}>Vol: {Math.round(volumeValue * 100)}%</Text> */}
 
       <View style={styles.inputRow}>
         <TouchableOpacity onPress={() => muteVolume()}>
@@ -98,7 +96,7 @@ export default function Track({ name, sound, index, volume, audioPath, onVolumeC
         </TouchableOpacity>
         
         <Slider
-          style={{ flex:1, height: 10, marginHorizontal: 10}}
+          style={ styles.volumeSlider }
           minimumValue={0}
           maximumValue={100}
           value={sliderValue}
@@ -109,6 +107,7 @@ export default function Track({ name, sound, index, volume, audioPath, onVolumeC
           thumbTintColor='red'
         />
       </View>
+      <Text style={styles.volumeText}>Vol: {Math.round(volumeValue * 100)}%</Text>
 
       <View style={styles.waveformWrapper}>
         <Waveform
@@ -116,16 +115,10 @@ export default function Track({ name, sound, index, volume, audioPath, onVolumeC
           ref={waveformRef}
           path={audioPath}
           candleWidth={3}
-          candleSpace={2}
+          candleSpace={1}
           waveColor="#fff"
-          scrubColor="red"
+          scrubColor="#fff"
           containerStyle={styles.waveformContainer}
-          onCurrentProgressChange={(current, duration) => {
-            // Ovdje možeš obraditi progress
-            // npr. promijeniti boju dijela waveforma
-            // waveformRef.current?.resumePlayer();
-            console.log('Current:', current, 'Duration:', duration);
-          }}
         />
         {duration > 0 && (
           <Animated.View
@@ -148,51 +141,45 @@ export default function Track({ name, sound, index, volume, audioPath, onVolumeC
 const styles = StyleSheet.create({
   track: {
     backgroundColor: '#4784b9d4',
-    padding: 15,
+    padding: 10,
     borderRadius: 10,
-    marginBottom: 15,
+    marginBottom: 5,
   },
   trackName: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#fff',
   },
+   volumeSlider: {
+    flex:1, 
+    height: 10, 
+    marginHorizontal: 10,
+  },
   volumeText: {
     color: '#aaa',
-    marginVertical: 5,
+    // marginVertical: 0,
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 10,
-  },
-  input: {
-    backgroundColor: '#fff',
-    borderRadius: 5,
-    paddingHorizontal: 10,
-    width: 60,
-    marginRight: 10,
-    textAlign: 'center',
-  },
-  muteText: {
-    color: '#fff',
-    fontWeight: '600',
+    // marginVertical: 2,
   },
   waveformContainer: {
-    height: 100,
+    height: 80,
     width: '100%',
-    marginTop: 10,
+    // marginTop: 10,
   },
   waveformWrapper: {
     position: 'relative',
-    marginTop: 10,
+    marginTop: -10,
   },
   progressIndicator: {
     position: 'absolute',
     top: 0,
     width: 2,
-    height: 100,
+    height: 40,
     backgroundColor: '#FF1744',
     zIndex: 10,
+    marginTop: 20,
   },
 });
