@@ -13,6 +13,8 @@ import FiltersScreen from './src/screens/FiltersScreen';
 import VisualScreen from './src/screens/VisualScreen';
 import SkiaVisualScreen from './src/screens/SkiaVisualScreen';
 import SourceSeparationPlayerScreen from './src/screens/sourceSeparation/SourceSeparationPlayerScreen';
+import PickerScreen from './src/screens/PickerScreen';
+import RecorderScreen from './src/screens/RecorderScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -23,6 +25,8 @@ type RootStackParamList = {
   Visual: undefined;
   Skia: undefined;
   SourceSeparation: undefined;
+  Picker: undefined;
+  Recorder: undefined;
 };
 
 type HomeScreenProps = {
@@ -162,6 +166,8 @@ function HomeScreen({ navigation }: HomeScreenProps) {
         <Button title='Skia Visual' onPress={() => navigation.navigate('Skia')} />
       <Button title='Sandbox' onPress={listFiles} />
       <Button title='SourceSeparation' onPress={() => navigation.navigate('SourceSeparation')} />
+      <Button title='Picker' onPress={() => navigation.navigate('Picker')} />
+      <Button title='Recorder' onPress={() => navigation.navigate('Recorder')} />
       <StatusBar style='auto' />
     </View>
   );
@@ -177,6 +183,8 @@ export default function App() {
         <Stack.Screen name='Visual' component={VisualScreen} />
         <Stack.Screen name='Skia' component={SkiaVisualScreen} />
         <Stack.Screen name='SourceSeparation' component={SourceSeparationPlayerScreen} />
+        <Stack.Screen name='Picker' component={PickerScreen} />
+        <Stack.Screen name='Recorder' component={RecorderScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
