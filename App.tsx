@@ -12,9 +12,10 @@ import { Asset } from 'expo-asset';
 import FiltersScreen from './src/screens/FiltersScreen';
 import VisualScreen from './src/screens/VisualScreen';
 import SkiaVisualScreen from './src/screens/SkiaVisualScreen';
-import SourceSeparationPlayerScreen from './src/screens/sourceSeparation/SourceSeparationPlayerScreen';
+import SourceSeparationPlayerScreen from './src/screens/SourceSeparationScreen/SourceSeparationPlayerScreen';
 import PickerScreen from './src/screens/PickerScreen';
 import RecorderScreen from './src/screens/RecorderScreen';
+import InitialScreen from './src/screens/InitialScreen/InitialScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -27,6 +28,7 @@ type RootStackParamList = {
   SourceSeparation: undefined;
   Picker: undefined;
   Recorder: undefined;
+  Initial: undefined;
 };
 
 type HomeScreenProps = {
@@ -168,6 +170,7 @@ function HomeScreen({ navigation }: HomeScreenProps) {
       <Button title='SourceSeparation' onPress={() => navigation.navigate('SourceSeparation')} />
       <Button title='Picker' onPress={() => navigation.navigate('Picker')} />
       <Button title='Recorder' onPress={() => navigation.navigate('Recorder')} />
+      <Button title='Initial' onPress={() => navigation.navigate('Initial')} />
       <StatusBar style='auto' />
     </View>
   );
@@ -185,6 +188,7 @@ export default function App() {
         <Stack.Screen name='SourceSeparation' component={SourceSeparationPlayerScreen} />
         <Stack.Screen name='Picker' component={PickerScreen} />
         <Stack.Screen name='Recorder' component={RecorderScreen} />
+        <Stack.Screen name='Initial' component={InitialScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
