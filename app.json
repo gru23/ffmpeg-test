@@ -3,6 +3,10 @@
     "name": "FFmpeg_1",
     "slug": "FFmpeg_1",
     "version": "1.0.0",
+    "scheme": [
+      "ffmpeg1",
+      "com.googleusercontent.apps.48939084992-12hq6th46bu8uo5e9koioo1ei3p9gh5u"
+    ],
     "plugins": [
       "expo-asset",
       "expo-font",

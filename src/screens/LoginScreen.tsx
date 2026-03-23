@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Button } from 'react-native';
+import { loginWithGoogle } from '../services/authService';
 
 export default function LoginScreen() {
     const[username, setUsername] = useState('');
@@ -9,6 +10,16 @@ export default function LoginScreen() {
         console.log('Username: ', username);
         console.log('Password: ', password);
     };
+
+  const handleLogin = async () => {
+    const token = await loginWithGoogle();
+    if (token) {
+      console.log('Logged in, token:', token);
+      // ovdje možeš poslati token backendu
+    } else {
+      console.log('Login failed or cancelled');
+    }
+  };
 
     return(
         <View style={styles.container}>
@@ -27,6 +38,7 @@ export default function LoginScreen() {
                 onChangeText={setPassword}
             />
             <Button title='Login' onPress={login} />
+            <Button title="Login with Google" onPress={handleLogin} />
         </View>
     )
 }
