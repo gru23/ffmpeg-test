@@ -39,7 +39,22 @@ function HomeScreen({ navigation }: HomeScreenProps) {
   const [inputPath, setInputPath] = useState<string>('');
   const [isInputReady, setIsInputReady] = useState(false);
 
+  // async function copyAsset(module: string, destName: string) {
+  //   const asset = Asset.fromModule(module);
+  //   await asset.downloadAsync();
+  //   const sourceUri = asset.localUri === null ? "" : asset.localUri;
+  //   const destUri = FileSystem.documentDirectory + destName;
+  //   await FileSystem.copyAsync({ from: sourceUri, to: destUri });
+  //   console.log('Kopirano u:', destUri);
+  // }
+
   const copyInputAsset = useCallback(async () => {
+    // await copyAsset(require('./assets/bass.wav'), 'bass.wav');
+    // await copyAsset(require('./assets/drums.wav'), 'drums.wav');
+    // await copyAsset(require('./assets/vocals.wav'), 'vocals.wav');
+    // await copyAsset(require('./assets/other.wav'), 'other.wav');
+
+
     const asset = Asset.fromModule(require('./assets/input.wav'));
     await asset.downloadAsync();
     // inputBD_44.1_16b_5s.wav inputBD_8kHz_8b_5s.wav inputBD.wav
