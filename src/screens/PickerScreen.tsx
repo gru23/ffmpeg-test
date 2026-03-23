@@ -3,6 +3,8 @@ import React, { useEffect, useState } from 'react';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Audio } from 'expo-av';
+import { uploadAudio } from '../services/audioService';
+import { pickAudioFile, pickMultipleAudioFiles } from '../utils/pickDocument';
 
 export default function PickerScreen() {
   const [files, setFiles] = useState<string[]>([]);
@@ -42,8 +44,9 @@ export default function PickerScreen() {
         if(!result.canceled) {
             const file = result.assets[0];
             console.log(`Izabrani fajl je ${file.name}, putanja ${file.uri}`);
-            // const dest = FileSystem.documentDirectory + file.name;
-            const dest = FileSystem.documentDirectory + "choosen";
+            const dest = FileSystem.documentDirectory + file.name;
+            setValue(file.name);
+            // const dest = FileSystem.documentDirectory + "choosen";
             await FileSystem.copyAsync({
                 from: file.uri,
                 to: dest,
@@ -76,6 +79,32 @@ export default function PickerScreen() {
     }
   }
 
+  const handleUpload = async () => {
+    const file = await pickAudioFile();
+    if(file) {
+      const dest = FileSystem.documentDirectory + file.name;
+      await FileSystem.copyAsync({
+        from: file.uri,
+        to: dest
+      });
+      try {
+        const response = await uploadAudio(dest, file.name);
+        console.log("Upload response: ", response);
+      } catch(err) {
+        console.error("Upload error: ", err);
+      }
+    }
+  }
+
+  const pickAudios = async () => {
+    const files = await pickMultipleAudioFiles();
+    if(files) {
+      console.log("Naslovi ucitanih fajlova: ");
+      files.forEach(file => console.log(file.name));
+    }
+    else console.log("Doslo je do greske izbora veceg broja fajlova");
+  }
+
   return (
     <View style={styles.container}>
       <Button title='Choose' onPress={chooseFile} />
@@ -96,6 +125,8 @@ export default function PickerScreen() {
       <Button title='Submit' onPress={() => deleteFile(value)} />
       <Button title="Play" onPress={playChoosen} />
       <Button title="Pause" onPress={pauseChoosen} />
+      <Button title="Upload" onPress={handleUpload} />
+      <Button title='Picks' onPress={pickAudios} />
     </View>
   )
 }
