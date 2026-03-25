@@ -1,6 +1,8 @@
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 
+import { APP_SCHEME, AUTH_DISCOVERY_ERROR_MESSAGE, AUTH_REQUEST_SCOPE, EXPO_PROJECT_FULL_NAME, GOOGLE_DISCOVERY_BASE_URL, GOOGLE_WEB_CLIENT_ID, REDIRECT_PATH } from '../constants';
+
 WebBrowser.maybeCompleteAuthSession();
 
 /* ova implementacija i dalje pravi prekid sa Metro Bundlerom tj. veza se prekida 
@@ -9,16 +11,11 @@ sistema nastavljam bez da koristim login pa na kraju svega ukljuciti i nju jer o
 problem rada aplikacije na telefonu (aplikacija radi bez obzira na to samo ne vidim 
 odzive/logove) */
 
-const APP_SCHEME = 'ffmpeg1';
-const REDIRECT_PATH = 'oauthredirect';
-const EXPO_PROJECT_FULL_NAME = '@gru23/FFmpeg_1';
-const GOOGLE_WEB_CLIENT_ID = '48939084992-ah3h7cvtjhp82dc5al8ser9g1h69lbk4.apps.googleusercontent.com';
-
 export async function loginWithGoogle() {
-  const discovery = await AuthSession.fetchDiscoveryAsync('https://accounts.google.com');
+  const discovery = await AuthSession.fetchDiscoveryAsync(GOOGLE_DISCOVERY_BASE_URL);
 
   if (!discovery) {
-    throw new Error('Discovery document not loaded');
+    throw new Error(AUTH_DISCOVERY_ERROR_MESSAGE);
   }
 
   const returnUrl = `${APP_SCHEME}:/${REDIRECT_PATH}`;
@@ -30,7 +27,7 @@ export async function loginWithGoogle() {
     redirectUri,
     responseType: AuthSession.ResponseType.Token,
     usePKCE: false,
-    scopes: ['openid', 'profile', 'email'],
+    scopes: AUTH_REQUEST_SCOPE,
   });
 
   const authUrl = await request.makeAuthUrlAsync(discovery);

@@ -5,7 +5,7 @@ import { Sound } from 'expo-av/build/Audio';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import Track from './Track';
-import { ICONS } from '../../constants/icons';
+import { ICONS } from '../../constants';
 import Slider from '@react-native-community/slider';
 import { MaterialIcons } from '@expo/vector-icons';
 
