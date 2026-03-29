@@ -11,6 +11,8 @@ import Card from './Card';
 
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { InitialStackParamList } from '../../navigation/InitialNavigator'; // prilagodi putanju
+import { pickAudioFile } from '../../utils/pickDocument';
+import { uploadAudio } from '../../services/audioService';
 
 type NavigationProp = NativeStackNavigationProp<InitialStackParamList, 'InitialScreen'>;
 
@@ -52,8 +54,13 @@ export default function InitialScreen() {
         icon={<MaterialCommunityIcons name="waveform" style={styles.optionTitleIcon} />}
         expanded={expandedCard === 'EDITOR'}
         onPress={() => setExpandedCard(expandedCard === 'EDITOR' ? null : 'EDITOR')}
-        // onBrowseFile={chooseFile}
-        //onBrowseFile={() => chooseFile('EditorScreen')}
+        onBrowseFile={async () => {
+          const file = await pickAudioFile();
+          if(file) {
+            console.log(`Izabrani audio fajl: ${file}`);
+            navigation.navigate('EditorScreen', { file });
+          }
+        }}
       />
 
       <Card
@@ -63,6 +70,20 @@ export default function InitialScreen() {
         icon={<MaterialIcons name="call-split" style={styles.optionTitleIcon} />}
         expanded={expandedCard === 'SEPARATION'}
         onPress={() => setExpandedCard(expandedCard === 'SEPARATION' ? null : 'SEPARATION')}
+        onBrowseFile={async () => {
+          const file = await pickAudioFile();
+          if(file) {
+            console.log(`Izabrani audio fajl: ${file}`);
+            try {
+              const response = await uploadAudio(file.uri, file.name);
+              console.log(`File uploaded: ${response}`);
+              navigation.navigate('SeparationScreen', { file });
+            }
+            catch(err) {
+              console.error(`Error upload audio: ${err}`);
+            }
+          }
+        }}
       />
     </View>
   )

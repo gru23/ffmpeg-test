@@ -14,7 +14,7 @@ export const uploadAudio = async (uri: string, name: string) => {
     name: name,
   } as any);
 
-  const response = await fetch("http://10.99.141.24:8080/upload", {//("http://localhost:8080/upload", {
+  const response = await fetch("http://192.168.100.25:8080/upload", {//("http://localhost:8080/upload", {
     method: "POST",
     body: formData,
     // headers: {
