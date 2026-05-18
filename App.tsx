@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, View, Button, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, Button, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { createNativeStackNavigator, NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { NavigationContainer } from '@react-navigation/native';
 import LoginScreen from './src/screens/LoginScreen';
@@ -15,21 +15,22 @@ import SkiaVisualScreen from './src/screens/SkiaVisualScreen';
 import SourceSeparationPlayerScreen from './src/screens/SourceSeparationScreen/SourceSeparationPlayerScreen';
 import PickerScreen from './src/screens/PickerScreen';
 import RecorderScreen from './src/screens/RecorderScreen';
-import InitialScreen from './src/screens/InitialScreen/InitialScreen';
-
-const Stack = createNativeStackNavigator();
+import InitialNavigator from './src/navigation/InitialNavigator';
+import { isStoredGoogleSessionValid } from './src/services/oAuthService';
 
 type RootStackParamList = {
   Home: undefined;
   Login: undefined;
   Filters: undefined;
   Visual: undefined;
-  Skia: undefined;
+  SkiaVisual: { path: string };
   SourceSeparation: undefined;
   Picker: undefined;
   Recorder: undefined;
   Initial: undefined;
 };
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 type HomeScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -180,7 +181,7 @@ function HomeScreen({ navigation }: HomeScreenProps) {
         <Text style={styles.login}>Sign in</Text>
       </TouchableOpacity>
       <Button title='Visual' onPress={() => navigation.navigate('Visual')} />
-        <Button title='Skia Visual' onPress={() => navigation.navigate('Skia')} />
+        <Button title='Skia Visual' onPress={() => navigation.navigate('SkiaVisual', { path: 'test2'})} />
       <Button title='Sandbox' onPress={listFiles} />
       <Button title='SourceSeparation' onPress={() => navigation.navigate('SourceSeparation')} />
       <Button title='Picker' onPress={() => navigation.navigate('Picker')} />
@@ -192,6 +193,42 @@ function HomeScreen({ navigation }: HomeScreenProps) {
 }
 
 export default function App() {
+  const [isAuthResolved, setIsAuthResolved] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const resolveAuthState = async () => {
+      try {
+        const validSession = await isStoredGoogleSessionValid();
+
+        if (mounted) {
+          setIsAuthenticated(validSession);
+        }
+      } finally {
+        if (mounted) {
+          setIsAuthResolved(true);
+        }
+      }
+    };
+
+    void resolveAuthState();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  if (!isAuthResolved) {
+    return (
+      <View style={styles.authLoaderContainer}>
+        <ActivityIndicator size="large" />
+        <Text style={styles.authLoaderText}>Provjera prijave...</Text>
+      </View>
+    );
+  }
+//<Stack.Navigator initialRouteName={isAuthenticated ? 'Initial' : 'Login'}>
   return (
     <NavigationContainer>
       <Stack.Navigator>
@@ -199,11 +236,11 @@ export default function App() {
         <Stack.Screen name='Login' component={LoginScreen} />
         <Stack.Screen name='Filters' component={FiltersScreen} />
         <Stack.Screen name='Visual' component={VisualScreen} />
-        <Stack.Screen name='Skia' component={SkiaVisualScreen} />
+        <Stack.Screen name='SkiaVisual' component={SkiaVisualScreen} initialParams={{ path: 'test2' }} />
         <Stack.Screen name='SourceSeparation' component={SourceSeparationPlayerScreen} />
         <Stack.Screen name='Picker' component={PickerScreen} />
         <Stack.Screen name='Recorder' component={RecorderScreen} />
-        <Stack.Screen name='Initial' component={InitialScreen} />
+        <Stack.Screen name='Initial' component={InitialNavigator} />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -221,5 +258,15 @@ const styles = StyleSheet.create({
   },
   login: {
     color: '#e3750f',
-  }
+  },
+  authLoaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  authLoaderText: {
+    marginTop: 12,
+    color: '#666',
+  },
 });

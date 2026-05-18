@@ -16,6 +16,7 @@
     "@shopify/react-native-skia": "2.2.12",
     "@simform_solutions/react-native-audio-waveform": "^2.1.6",
     "@siteed/expo-audio-studio": "^2.18.6",
+    "axios": "^1.16.1",
     "expo": "~54.0.33",
     "expo-asset": "~12.0.12",
     "expo-auth-session": "~7.0.10",
