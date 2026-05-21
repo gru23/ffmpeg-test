@@ -1,8 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Button, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Button, Alert, ActivityIndicator, TextInput } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { isStoredGoogleSessionValid, loginWithGoogle } from '../services/oAuthService';
+import { LoginRequest } from '../models/auth/LoginRequest';
+import { login, logout } from '../services/authService';
+import { clearTokens, getAccessToken, getRefreshToken, saveTokens } from '../utils/authStorage';
+import { LogoutRequest } from '../models/auth/LogoutRequest';
+import { clearClient, getClient, saveClient } from '../utils/clientStorage';
 
 type LoginNavigationParamList = {
     Login: undefined;
@@ -12,6 +17,9 @@ type LoginNavigationParamList = {
 export default function LoginScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<LoginNavigationParamList>>();
     const [isCheckingSession, setIsCheckingSession] = useState(true);
+
+    const [username, setUsername] = useState("");
+    const [password, setPassword] = useState("");
 
     useEffect(() => {
         let mounted = true;
@@ -65,10 +73,77 @@ export default function LoginScreen() {
         );
     }
 
+    async function handleLocalLogin() {
+        try {
+            const request: LoginRequest = {username, password};
+            const response = await login(request);
+            await saveTokens(response.accessToken, response.refreshToken);
+            await saveClient({
+                id: response.id,
+                name: response.name,
+                surname: response.surname,
+                username: response.username,
+                email: response.email
+            });
+            navigation.replace("Initial");
+            // Alert.alert("Login uspješan", `Dobio si token: ${response.accessToken}`);
+        } catch (error: any) {
+            if(error.status === 401)
+                Alert.alert("Greska", "Login nije uspio, 401");
+            else
+                Alert.alert("Greška", error.message || "Login nije uspio");
+        }
+    }
+
+    async function handleLogout() {
+         try {
+            const token = await getRefreshToken();
+            if(token === null)
+                return;
+            const request: LogoutRequest = { clientId: 2, refreshToken: token };
+            await logout(request);
+            await clearTokens();
+            await clearClient();
+            Alert.alert("Logout uspješan", `Odjavio se`);
+        } catch (error: any) {
+            if(error.status === 401)
+                Alert.alert("Greska", "Logout nije uspio, 401");
+            else
+                Alert.alert("Greška", error.message || "Login nije uspio");
+        }
+    }
+
     return(
         <View style={styles.container}>
             <Text style={styles.title}>Login</Text>
-            <Button title="Login with Google" onPress={handleLogin} />
+            <TextInput 
+                placeholder='Username'
+                value={username}
+                onChangeText={setUsername}
+                style={styles.input}
+            />
+            <TextInput 
+                placeholder='Password'
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                style={styles.input}
+            />
+            <Button title="Login" onPress={handleLocalLogin} />
+            <Button title='Logout' onPress={handleLogout}/>
+            {/* <Button title="Continue with Google" onPress={handleLogin} /> */}
+            <Button
+                title="Ispisi klijenta"
+                onPress={async () => {
+                    const client = await getClient();
+                    console.log(client);
+                    const access = await getAccessToken();
+                    const refresh = await getRefreshToken();
+                    console.log(access);
+                    console.log(refresh);
+                    // Alert.alert("Klijent", client ? `${client.name} ${client.surname}` : "Nema klijenta");
+                }}
+            />
         </View>
     )
 }
@@ -89,4 +164,9 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         color: '#666',
     },
+    input: { 
+        borderWidth: 1, 
+        marginBottom: 10, 
+        padding: 8 
+    }
 });

@@ -1,4 +1,4 @@
-export const API_BASE_URL = 'http://localhost:8080';
+export const API_BASE_URL = 'http://10.99.150.137:8080';//'http://localhost:8080';
 
 const API_AUTH_BASE = `${API_BASE_URL}/auth`;
 const API_CLIENT_BASE = `${API_BASE_URL}/clients`;
