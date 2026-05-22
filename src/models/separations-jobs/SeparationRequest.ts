@@ -1,7 +1,8 @@
+import { DocumentPickerAsset } from "expo-document-picker";
 import { SeparationOption } from "./SeparationOption";
 
 export interface SeparationRequest {
     clientId: number;
-    file: Blob;
+    file: DocumentPickerAsset;
     option: SeparationOption;
 };

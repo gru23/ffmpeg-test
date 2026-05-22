@@ -1,4 +1,4 @@
 export enum SeparationOption {
-    FOUR_STEMS = "FOURS_STEMS",
+    FOUR_STEMS = "FOUR_STEMS",
     VOCALS = "VOCALS"
 };

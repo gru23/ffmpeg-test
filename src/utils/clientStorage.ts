@@ -12,6 +12,12 @@ export async function getClient(): Promise<Client | null> {
   return raw ? JSON.parse(raw) as Client : null;
 }
 
+export async function getClientId(): Promise<number | null> {
+  const raw = await AsyncStorage.getItem(CLIENT_KEY);
+  const client = raw ? JSON.parse(raw) as Client : null;
+  return client ? client.id : null;
+}
+
 export async function clearClient() {
   await AsyncStorage.removeItem(CLIENT_KEY);
 }

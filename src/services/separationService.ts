@@ -1,9 +1,11 @@
 import { SeparationJob } from "../models/separations-jobs/SeparationJob";
+import { SeparationOption } from "../models/separations-jobs/SeparationOption";
 import { SeparationRequest } from "../models/separations-jobs/SeparationRequest";
 import { SeparationStatusResponse } from "../models/separations-jobs/SeparationStatusResponse";
 import { API_SEPARATIONS_ENDPOINTS } from "../shared/api-endpoints";
 import { handleApiError } from "../utils/handleApiError";
 import { api } from "./api";
+import { DocumentPickerAsset } from "expo-document-picker";
 
 export async function getById(id: string): Promise<SeparationJob> {
     try {
@@ -22,12 +24,19 @@ export async function deleteSeparation(id: string): Promise<void> {
     }
 };
 
-export async function requestSeparation(request: SeparationRequest): Promise<SeparationStatusResponse> {
+export async function requestSeparation(
+    // clientId: number, option: SeparationOption, file: DocumentPickerAsset
+    formData: FormData
+): Promise<SeparationStatusResponse> {
     try {
-        const formData = new FormData();
-        formData.append("clientId", request.clientId.toString());
-        formData.append("file", request.file);
-        formData.append("option", request.option);
+        // const formData = new FormData();
+        // formData.append("clientId", clientId.toString());
+        // formData.append("file", {
+        //     uri: file.uri,
+        //     type: file.mimeType || "audio/mpeg", // obavezno MIME type
+        //     name: file.name || "song.mp3",       // ime fajla
+        // } as any);
+        // formData.append("option", option);
         const response = await api.post<SeparationStatusResponse>(
             API_SEPARATIONS_ENDPOINTS.separate, 
             formData,

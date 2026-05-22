@@ -5,6 +5,10 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { Audio } from 'expo-av';
 import { uploadAudio } from '../services/audioService';
 import { pickAudioFile, pickMultipleAudioFiles } from '../utils/pickDocument';
+import { requestSeparation } from '../services/separationService';
+import { SeparationOption } from '../models/separations-jobs/SeparationOption';
+import { DocumentPickerAsset } from 'expo-document-picker';
+import { getClientId } from '../utils/clientStorage';
 
 export default function PickerScreen() {
   const [files, setFiles] = useState<string[]>([]);
@@ -80,7 +84,10 @@ export default function PickerScreen() {
   }
 
   const handleUpload = async () => {
+    console.log("DODES LI OVDJE1?");
+    try {
     const file = await pickAudioFile();
+    console.log("DODES LI OVDJE?2");
     if(file) {
       const dest = FileSystem.documentDirectory + file.name;
       await FileSystem.copyAsync({
@@ -88,12 +95,38 @@ export default function PickerScreen() {
         to: dest
       });
       try {
-        const response = await uploadAudio(dest, file.name);
+        // const response = await uploadAudio(dest, file.name);
+        console.log("DODES LI OVDJE?");
+        const client = await getClientId();
+        if(!client)
+          return;
+        console.log('Prodje?');
+        const formData = await makeFormData(client, SeparationOption.FOUR_STEMS, file);
+        console.log('Prodje?1');
+        const response = await requestSeparation(formData);
+        console.log('Prodje?2');
         console.log("Upload response: ", response);
       } catch(err) {
         console.error("Upload error: ", err);
       }
     }
+    } catch(err) {
+      console.error("Greška u pickAudioFile:", err); 
+    }
+  }
+
+  const makeFormData = async (
+    clientId: number, option: SeparationOption, file: DocumentPickerAsset
+  ): Promise<FormData> => {
+    const formData = new FormData();
+    formData.append("clientId", clientId.toString());
+    formData.append("file", {
+      uri: file.uri,
+      type: file.mimeType || "audio/mpeg", // obavezno MIME type
+      name: file.name || "song.mp3",       // ime fajla
+    } as any);
+    formData.append("option", option);
+    return formData;
   }
 
   const pickAudios = async () => {
