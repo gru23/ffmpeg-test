@@ -17,6 +17,7 @@ import PickerScreen from './src/screens/PickerScreen';
 import RecorderScreen from './src/screens/RecorderScreen';
 import InitialNavigator from './src/navigation/InitialNavigator';
 import { isStoredGoogleSessionValid } from './src/services/oAuthService';
+import { checkJwtValid } from './src/services/authService';
 
 type RootStackParamList = {
   Home: undefined;
@@ -201,7 +202,11 @@ export default function App() {
 
     const resolveAuthState = async () => {
       try {
-        const validSession = await isStoredGoogleSessionValid();
+        // ovaj validSession je bio prije moje logike za prijavu, is'o je preko google-a, oauth2
+        // const validSession = await isStoredGoogleSessionValid();
+        const validSession = await checkJwtValid();
+        const ispis = validSession ? "PRIJAVLJEN" : "NIJE PRIJAVLJEN";
+        console.log(ispis);
 
         if (mounted) {
           setIsAuthenticated(validSession);
@@ -228,7 +233,9 @@ export default function App() {
       </View>
     );
   }
-//<Stack.Navigator initialRouteName={isAuthenticated ? 'Initial' : 'Login'}>
+  // ovo mozes na kraju staviti. Izabacio sam sada jer nemas stelice za vracanje na 
+  // onu initial stranu ako nisi prijavljen. Ovako ostavi za razvoj
+  //<Stack.Navigator initialRouteName={isAuthenticated ? 'Initial' : 'Login'}>
   return (
     <NavigationContainer>
       <Stack.Navigator>
