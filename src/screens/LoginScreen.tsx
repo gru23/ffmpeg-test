@@ -131,6 +131,14 @@ export default function LoginScreen() {
             />
             <Button title="Login" onPress={handleLocalLogin} />
             <Button title='Logout' onPress={handleLogout}/>
+            <Button title='Stari JWT' onPress={async () => {
+                console.log(await getAccessToken());
+                const refresh = await getRefreshToken() || "";
+                const jwt = "eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiIyIiwic3ViIjoid2ljayIsImV4cCI6MTc3OTEzNzkzMn0.vj0zuSpKyep0i8z2MXxgXErcJlyylFgbAA3rKe3vy-r6jWrRAJzlYyGC1eInvFvPWc14gEGcQOIEzRSRRXaABg";
+                await clearTokens();
+                await saveTokens(jwt, refresh);
+                console.log(await getAccessToken());
+            }} />
             {/* <Button title="Continue with Google" onPress={handleLogin} /> */}
             <Button
                 title="Ispisi klijenta"
