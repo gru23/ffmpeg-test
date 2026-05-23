@@ -3,7 +3,7 @@ import { clearTokens, getAccessToken, getRefreshToken, saveTokens } from "../uti
 import { refreshJwt } from "./authService";
 
 export const api = axios.create({
-  //timeout: 7000
+  timeout: 7000
 });
 
 api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
