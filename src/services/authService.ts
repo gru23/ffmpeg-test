@@ -57,7 +57,10 @@ export async function checkJwtValid(): Promise<boolean> {
 
 async function checkSession(): Promise<Client> {
     try {
-        const response = await api.get<Client>(API_AUTH_ENDPOINTS.checkSession);
+        const response = await api.get<Client>(
+            API_AUTH_ENDPOINTS.checkSession, 
+            {timeout: 7000,}
+        );
         return response.data;
     } catch(error: any) {
         throw handleApiError(error);

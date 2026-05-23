@@ -2,7 +2,9 @@ import axios, { InternalAxiosRequestConfig } from "axios";
 import { clearTokens, getAccessToken, getRefreshToken, saveTokens } from "../utils/authStorage";
 import { refreshJwt } from "./authService";
 
-export const api = axios.create();
+export const api = axios.create({
+  //timeout: 7000
+});
 
 api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   const token = await getAccessToken();
