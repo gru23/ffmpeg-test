@@ -18,6 +18,8 @@ import RecorderScreen from './src/screens/RecorderScreen';
 import InitialNavigator from './src/navigation/InitialNavigator';
 import { isStoredGoogleSessionValid } from './src/services/oAuthService';
 import { checkJwtValid } from './src/services/authService';
+import RegistrationScreen from './src/screens/RegistrationScreen';
+import AccountScreen from './src/screens/AccountScreen';
 
 type RootStackParamList = {
   Home: undefined;
@@ -29,6 +31,8 @@ type RootStackParamList = {
   Picker: undefined;
   Recorder: undefined;
   Initial: undefined;
+  Registration: undefined;
+  Account: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -188,6 +192,7 @@ function HomeScreen({ navigation }: HomeScreenProps) {
       <Button title='Picker' onPress={() => navigation.navigate('Picker')} />
       <Button title='Recorder' onPress={() => navigation.navigate('Recorder')} />
       <Button title='Initial' onPress={() => navigation.navigate('Initial')} />
+      <Button title='Account' onPress={() => navigation.navigate('Account')} />
       <StatusBar style='auto' />
     </View>
   );
@@ -248,6 +253,8 @@ export default function App() {
         <Stack.Screen name='Picker' component={PickerScreen} />
         <Stack.Screen name='Recorder' component={RecorderScreen} />
         <Stack.Screen name='Initial' component={InitialNavigator} />
+        <Stack.Screen name='Registration' component={RegistrationScreen} />
+        <Stack.Screen name='Account' component={AccountScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
