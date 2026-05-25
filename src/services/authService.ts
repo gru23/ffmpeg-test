@@ -10,8 +10,8 @@ import { Client } from "../models/clients/Client";
 import { API_AUTH_ENDPOINTS } from "../shared/api-endpoints";
 import { handleApiError } from "../utils/handleApiError";
 import { api } from "./api";
-import { getAccessToken, saveTokens } from "../utils/authStorage";
-import { saveClient } from "../utils/clientStorage";
+import { clearTokens, getAccessToken } from "../utils/authStorage";
+import { clearClient, saveClient } from "../utils/clientStorage";
 
 export async function login(request: LoginRequest): Promise<LoginResponse> {
     try {
@@ -24,7 +24,7 @@ export async function login(request: LoginRequest): Promise<LoginResponse> {
 
 export async function registration(request: ClientRequest): Promise<Client> {
     try {
-        const response = await api.post<Client>(API_AUTH_ENDPOINTS.registration, request);
+        const response = await axios.post<Client>(API_AUTH_ENDPOINTS.registration, request);
         return response.data;
     } catch(error: any) {
         throw handleApiError(error);
@@ -51,6 +51,10 @@ export async function checkJwtValid(): Promise<boolean> {
         }
         return false;
     } catch(err: any) {
+        if(err.status === 401) {
+            await clearTokens();
+            await clearClient();
+        }
         return false;
     }
 }

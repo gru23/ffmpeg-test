@@ -1,6 +1,7 @@
 import axios, { InternalAxiosRequestConfig } from "axios";
 import { clearTokens, getAccessToken, getRefreshToken, saveTokens } from "../utils/authStorage";
 import { refreshJwt } from "./authService";
+import { Alert } from "react-native";
 
 export const api = axios.create({
   timeout: 7000
@@ -19,7 +20,14 @@ api.interceptors.response.use(
   async error => {
     const originalRequest = error.config;
 
-    if(error.response?.status === 401 && error.response?.data?.message === "TOKEN_EXPIRED") {
+    if(error.code === "ECONNABORTED") {
+      Alert.alert("Error", "Server error, please try again");
+    }
+
+    if (error.response?.status === 401 && 
+        error.response?.data?.message === "TOKEN_EXPIRED" && 
+        !originalRequest._retry
+      ) {
       console.log("Interceptor: TOKEN_EXPIRED, pokušavam refresh...");
       originalRequest._retry = true;
 
