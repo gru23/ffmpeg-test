@@ -21,7 +21,7 @@ import { checkJwtValid } from './src/services/authService';
 import RegistrationScreen from './src/screens/RegistrationScreen';
 import AccountScreen from './src/screens/AccountScreen';
 
-type RootStackParamList = {
+export type RootStackParamList = {
   Home: undefined;
   Login: undefined;
   Filters: undefined;

@@ -16,21 +16,12 @@ export const clientUpdateSchema = Yup.object().shape({
   surname: Yup.string().required("Surname is required"),
   username: Yup.string()
     .required("Username is required")
-    .test("unique-username", "Username is required", async function (value) {
-      if (!value) return false;
-
+    .test("unique-username", "Username is already used", async function (value) {
+      if (!value) return true;
+      const { originalClient } = this.options.context || {};
+      if (originalClient && value === originalClient.username) return true;
       try {
-        const clientId = await getClientId();
-        if (clientId === null) return false;
-
-        await update(clientId, {
-          name: this.parent.name,
-          surname: this.parent.surname,
-          username: value,
-          email: this.parent.email,
-        });
-
-        return true;
+        return await usernameAvailable(value);
       } catch (error: any) {
         return false;
       }
@@ -40,7 +31,9 @@ export const clientUpdateSchema = Yup.object().shape({
 
 export const passwordChangeSchema = Yup.object().shape({
   oldPassword: Yup.string().required("Old password is required"),
-  newPassword: Yup.string().min(6, "Password must be at least 6 characters").required("New password is required"),
+  newPassword: Yup.string()
+    // .min(6, "Password must be at least 6 characters")
+    .required("New password is required"),
   confirmPassword: Yup.string()
     .oneOf([Yup.ref("newPassword")], "Passwords aren't matching")
     .required("Confirm password"),

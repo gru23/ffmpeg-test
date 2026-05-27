@@ -1,10 +1,17 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, TextInput, Button, StyleSheet, ScrollView, Keyboard, TouchableOpacity, ActivityIndicator } from "react-native";
-import { getClient, getClientId, saveClient } from "../utils/clientStorage";
+import { View, Text, TextInput, Button, StyleSheet, ScrollView, Keyboard, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
+import { clearClient, getClient, getClientId, saveClient } from "../utils/clientStorage";
 import { clientUpdateSchema, passwordChangeSchema } from "../utils/validationSchemas";
 import * as Yup from "yup";
-import { changePassword, update } from "../services/clientService";
+import { changePassword, deleteClient, update } from "../services/clientService";
 import { Client } from "../models/clients/Client";
+import { clearTokens } from "../utils/authStorage";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp  } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../App";
+
+
+type NavigationProp = NativeStackNavigationProp <RootStackParamList, "Account">;
 
 export default function ProfileScreen() {
   const [name, setName] = useState("");
@@ -19,6 +26,8 @@ export default function ProfileScreen() {
 
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  const navigation = useNavigation<NavigationProp>();
 
   useEffect(() => {
     const loadClient = async () => {
@@ -45,7 +54,10 @@ export default function ProfileScreen() {
     try {
       setLoading(true);
       Keyboard.dismiss();
-      await clientUpdateSchema.validate({ name, surname, username, email }, { abortEarly: false });
+      await clientUpdateSchema.validate(
+        { name, surname, username, email }, 
+        { abortEarly: false, context: {originalClient} }
+      );
       setErrors({});
       const clientId = await getClientId();
       if(clientId === null)
@@ -61,6 +73,7 @@ export default function ProfileScreen() {
       );
       console.log(updatedClient);
       await saveClient(updatedClient);
+      setOriginalClient(updatedClient);
       console.log("Podaci validni, šaljem na backend");
     } catch (err) {
       if (err instanceof Yup.ValidationError) {
@@ -78,23 +91,66 @@ export default function ProfileScreen() {
   const handleChangePassword = async () => {
     try {
       setLoading(true);
-      await passwordChangeSchema.validate({ oldPassword, newPassword, confirmPassword }, { abortEarly: false });
+      await passwordChangeSchema.validate(
+        { oldPassword, newPassword, confirmPassword }, 
+        { abortEarly: false }
+      );
       setErrors({});
       const response = await changePassword({oldPassword: oldPassword, newPassword: newPassword});
       console.log(response);
       console.log("Lozinka validna, šaljem na backend");
-    } catch (err) {
+      setOldPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: any) {
       if (err instanceof Yup.ValidationError) {
         const newErrors: { [key: string]: string } = {};
         err.inner.forEach(e => {
           if (e.path) newErrors[e.path] = e.message;
         });
         setErrors(newErrors);
+      } else {
+        if (err.status === 401) {
+          setErrors({ oldPassword: "Old password is incorrect" });
+        } else {
+          setErrors({ oldPassword: err.message || "Password change failed" });
+        }
       }
     } finally {
       setLoading(false);
     }
   };
+
+  const handleDeletingAccount = async() => {
+    const clientId = await getClientId();
+    if(!clientId) return;
+
+    Alert.alert(
+      "Confirm Deletion",
+      "Are you sure you want to delete your account? This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteClient(clientId);
+              await clearClient();
+              await clearTokens();
+              navigation.reset({
+                index: 0,
+                routes: [{ name: "Login" }],
+              });
+            } catch (err) {
+              console.error("Failed to delete account", err);
+              Alert.alert("Error", "Account deletion failed. Please try again.");
+            }
+          },
+        },
+      ]
+    );
+  }
 
   return (
     <View style={styles.outlineContainer}>
@@ -164,6 +220,9 @@ export default function ProfileScreen() {
           </View>
 
           <Button title="Change password" onPress={handleChangePassword} />
+        </View>
+        <View>
+          <Button title="Delete Account" color="red" onPress={handleDeletingAccount} />
         </View>
       </ScrollView>
       {loading && (
