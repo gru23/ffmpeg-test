@@ -1,32 +1,16 @@
 import React, { useEffect, useState } from "react";
-import {
-    View,
-    Text,
-    StyleSheet,
-    Button,
-    Alert,
-    ActivityIndicator,
-    TextInput,
-    TouchableOpacity,
-} from "react-native";
+import { View, Text, StyleSheet, Button, Alert, ActivityIndicator, TextInput, TouchableOpacity } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as Yup from "yup";
-import {
-    isStoredGoogleSessionValid,
-    loginWithGoogle,
-} from "../services/oAuthService";
+import { isStoredGoogleSessionValid, loginWithGoogle } from "../services/oAuthService";
 import { LoginRequest } from "../models/auth/LoginRequest";
 import { login, logout } from "../services/authService";
-import {
-    clearTokens,
-    getAccessToken,
-    getRefreshToken,
-    saveTokens,
-} from "../utils/authStorage";
+import { clearTokens, getAccessToken, getRefreshToken, saveTokens } from "../utils/authStorage";
 import { LogoutRequest } from "../models/auth/LogoutRequest";
 import { clearClient, getClient, saveClient } from "../utils/clientStorage";
 import { loginSchema } from "../utils/validationSchemas";
+import { showToast } from "../shared/ToastHelper";
 
 type LoginNavigationParamList = {
     Login: undefined;
@@ -115,7 +99,6 @@ export default function LoginScreen() {
                 email: response.email,
             });
             navigation.replace("Initial");
-            // Alert.alert("Login uspješan", `Dobio si token: ${response.accessToken}`);
         } catch (err: any) {
             if (err instanceof Yup.ValidationError) {
                 const newErrors: { [key: string]: string } = {};
@@ -124,7 +107,9 @@ export default function LoginScreen() {
                 });
                 setErrors(newErrors);
             } else {
-                if (err.status === 401) Alert.alert("Greška", "Login nije uspio, 401");
+                if (err.status === 401)
+                    showToast("error", "Unsuccessful login", "Credentials are not valid.")
+                    // Alert.alert("Greška", "Login nije uspio, 401");
                 else Alert.alert("Greška", err.message || "Login nije uspio");
             }
         } finally {

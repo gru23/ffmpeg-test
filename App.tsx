@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View, Button, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { createNativeStackNavigator, NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { NavigationContainer } from '@react-navigation/native';
+import Toast, { BaseToast, ToastConfig } from 'react-native-toast-message';
 import LoginScreen from './src/screens/LoginScreen';
 
 import { FFmpegKit } from 'ffmpeg-kit-react-native';
@@ -198,6 +199,25 @@ function HomeScreen({ navigation }: HomeScreenProps) {
   );
 }
 
+const toastConfig: ToastConfig = {
+  success: (props) => (
+    <BaseToast
+      {...props}
+      style={{ borderLeftColor: 'green' }}
+      text1Style={{ fontSize: 16 }}
+      text2Style={{ fontSize: 14 }}
+    />
+  ),
+  error: (props) => (
+    <BaseToast
+      {...props}
+      style={{ borderLeftColor: 'red' }}
+      text1Style={{ fontSize: 16 }}
+      text2Style={{ fontSize: 14 }}
+    />
+  ),
+};
+
 export default function App() {
   const [isAuthResolved, setIsAuthResolved] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -242,21 +262,24 @@ export default function App() {
   // onu initial stranu ako nisi prijavljen. Ovako ostavi za razvoj
   //<Stack.Navigator initialRouteName={isAuthenticated ? 'Initial' : 'Login'}>
   return (
-    <NavigationContainer>
-      <Stack.Navigator>
-        <Stack.Screen name='Home' component={HomeScreen}/>
-        <Stack.Screen name='Login' component={LoginScreen} />
-        <Stack.Screen name='Filters' component={FiltersScreen} />
-        <Stack.Screen name='Visual' component={VisualScreen} />
-        <Stack.Screen name='SkiaVisual' component={SkiaVisualScreen} initialParams={{ path: 'test2' }} />
-        <Stack.Screen name='SourceSeparation' component={SourceSeparationPlayerScreen} />
-        <Stack.Screen name='Picker' component={PickerScreen} />
-        <Stack.Screen name='Recorder' component={RecorderScreen} />
-        <Stack.Screen name='Initial' component={InitialNavigator} />
-        <Stack.Screen name='Registration' component={RegistrationScreen} />
-        <Stack.Screen name='Account' component={AccountScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <>
+      <NavigationContainer>
+        <Stack.Navigator>
+          <Stack.Screen name='Home' component={HomeScreen}/>
+          <Stack.Screen name='Login' component={LoginScreen} />
+          <Stack.Screen name='Filters' component={FiltersScreen} />
+          <Stack.Screen name='Visual' component={VisualScreen} />
+          <Stack.Screen name='SkiaVisual' component={SkiaVisualScreen} initialParams={{ path: 'test2' }} />
+          <Stack.Screen name='SourceSeparation' component={SourceSeparationPlayerScreen} />
+          <Stack.Screen name='Picker' component={PickerScreen} />
+          <Stack.Screen name='Recorder' component={RecorderScreen} />
+          <Stack.Screen name='Initial' component={InitialNavigator} />
+          <Stack.Screen name='Registration' component={RegistrationScreen} />
+          <Stack.Screen name='Account' component={AccountScreen} />
+        </Stack.Navigator>
+      </NavigationContainer>
+      <Toast config={toastConfig} />
+    </>
   );
 }
 

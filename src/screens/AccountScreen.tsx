@@ -9,6 +9,9 @@ import { clearTokens } from "../utils/authStorage";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp  } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../App";
+import ConfirmDialog from "../components/ConfirmDialog";
+import InputField from "../components/InputField";
+import { showToast } from "../shared/ToastHelper";
 
 
 type NavigationProp = NativeStackNavigationProp <RootStackParamList, "Account">;
@@ -25,6 +28,7 @@ export default function ProfileScreen() {
   const [originalClient, setOriginalClient] = useState<Client | null>(null);
 
   const [loading, setLoading] = useState(false);
+  const [showDialog, setShowDialog] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const navigation = useNavigation<NavigationProp>();
@@ -74,6 +78,7 @@ export default function ProfileScreen() {
       console.log(updatedClient);
       await saveClient(updatedClient);
       setOriginalClient(updatedClient);
+      showToast("success", "Account updated", "Your changes have been saved.");
       console.log("Podaci validni, šaljem na backend");
     } catch (err) {
       if (err instanceof Yup.ValidationError) {
@@ -102,6 +107,7 @@ export default function ProfileScreen() {
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      showToast("success", "Password changed", "Your password have been changed.");
     } catch (err: any) {
       if (err instanceof Yup.ValidationError) {
         const newErrors: { [key: string]: string } = {};
@@ -121,36 +127,20 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleDeletingAccount = async() => {
-    const clientId = await getClientId();
-    if(!clientId) return;
-
-    Alert.alert(
-      "Confirm Deletion",
-      "Are you sure you want to delete your account? This action cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteClient(clientId);
-              await clearClient();
-              await clearTokens();
-              navigation.reset({
-                index: 0,
-                routes: [{ name: "Login" }],
-              });
-            } catch (err) {
-              console.error("Failed to delete account", err);
-              Alert.alert("Error", "Account deletion failed. Please try again.");
-            }
-          },
-        },
-      ]
-    );
-  }
+  const handleConfirmDelete = async () => {
+    try {
+      const clientId = await getClientId();
+      if (!clientId) return;
+      await deleteClient(clientId);
+      await clearClient();
+      await clearTokens();
+      navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+    } catch (err) {
+      Alert.alert("Error", "Account deletion failed. Please try again.");
+    } finally {
+      setShowDialog(false);
+    }
+  };
 
   return (
     <View style={styles.outlineContainer}>
@@ -159,34 +149,34 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Update account</Text>
 
-          <View style={styles.inputContainer}>
-            <TextInput style={styles.input} placeholder="Name*" value={name} onChangeText={setName} />
-            <View style={styles.errorContainer}>
-              <Text style={styles.error}>{errors.name || " "}</Text>
-            </View>
-          </View>
-          {/* <TextInput style={styles.input} placeholder="Name*" value={name} onChangeText={setName} />
-          {errors.name && <Text style={styles.error}>{errors.name}</Text>} */}
+          <InputField 
+            placeholder="Name*"
+            value={name}
+            onChangeText={setName}
+            error={errors.name}
+          />
 
-          <View style={styles.inputContainer}>
-            <TextInput style={styles.input} placeholder="Surname*" value={surname} onChangeText={setSurname} />
-            <View style={styles.errorContainer}>
-              <Text style={styles.error}>{errors.surname || " "}</Text>
-            </View>
-          </View>
+          <InputField 
+            placeholder="Surname*"
+            value={surname}
+            onChangeText={setSurname}
+            error={errors.surname}
+          />
 
-          <View style={styles.inputContainer}>
-            <TextInput style={styles.input} placeholder="Username*" value={username} onChangeText={setUsername} />
-            <View style={styles.errorContainer}>
-              <Text style={styles.error}>{errors.username || " "}</Text>
-            </View>
-          </View>
-          <View style={styles.inputContainer}>
-            <TextInput style={styles.input} placeholder="Email*" keyboardType="email-address" value={email} onChangeText={setEmail} />
-            <View style={styles.errorContainer}>
-              <Text style={styles.error}>{errors.email || " "}</Text>
-            </View>
-          </View>
+          <InputField 
+            placeholder="Username*"
+            value={username}
+            onChangeText={setUsername}
+            error={errors.username}
+          />
+
+          <InputField 
+            placeholder="E-mail"
+            keyboardType="email-address"
+            value={email}
+            onChangeText={setEmail}
+            error={errors.email}
+          />
 
           <Button title="Update account" onPress={handleUpdateAccount} disabled={!isChanged} />
           {/* <TouchableOpacity style={styles.button} onPress={handleUpdateAccount}>
@@ -198,31 +188,34 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Change password</Text>
 
-          <View style={styles.inputContainer}>
-            <TextInput style={styles.input} placeholder="Old Password" secureTextEntry value={oldPassword} onChangeText={setOldPassword} />
-            <View style={styles.errorContainer}>
-              <Text style={styles.error}>{errors.oldPassword || " "}</Text>
-            </View>
-          </View>
+          <InputField 
+            placeholder="Old Password"
+            secureTextEntry
+            value={oldPassword}
+            onChangeText={setOldPassword}
+            error={errors.oldPassword}
+          />
+         
+          <InputField 
+            placeholder="New Password"
+            secureTextEntry
+            value={newPassword}
+            onChangeText={setNewPassword}
+            error={errors.newPassword}
+          />
 
-          <View style={styles.inputContainer}>
-            <TextInput style={styles.input} placeholder="New Password" secureTextEntry value={newPassword} onChangeText={setNewPassword} />
-            <View style={styles.errorContainer}>
-              <Text style={styles.error}>{errors.newPassword || " "}</Text>
-            </View>
-          </View>
-
-          <View style={styles.inputContainer}>
-            <TextInput style={styles.input} placeholder="Confirm new Password" secureTextEntry value={confirmPassword} onChangeText={setConfirmPassword} />
-            <View style={styles.errorContainer}>
-              <Text style={styles.error}>{errors.confirmPassword || " "}</Text>
-            </View>
-          </View>
+          <InputField 
+            placeholder="Confirm new Password"
+            secureTextEntry
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            error={errors.confirmPassword}
+          />
 
           <Button title="Change password" onPress={handleChangePassword} />
         </View>
         <View>
-          <Button title="Delete Account" color="red" onPress={handleDeletingAccount} />
+          <Button title="Delete Account" color="red" onPress={() => setShowDialog(true)} />
         </View>
       </ScrollView>
       {loading && (
@@ -231,6 +224,14 @@ export default function ProfileScreen() {
           <Text style={styles.loadingText}>Updating...</Text>
         </View>
       )}
+
+      <ConfirmDialog 
+        visible={showDialog}
+        title="Confirm Delete"
+        description="Are you sure you want to delete your account? This action cannot be undone."
+        onCancel={() => setShowDialog(false)}
+        onConfirm={handleConfirmDelete}
+      />
     </View>
   );
 }
@@ -286,15 +287,15 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   overlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: "rgba(189, 200, 206, 0.75)",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    loadingText: {
-        marginTop: 12,
-        color: "#fff",
-        fontSize: 20,
-        fontWeight: "bold",
-    },
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(189, 200, 206, 0.75)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "bold",
+  },
 });
