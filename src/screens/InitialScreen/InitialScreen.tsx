@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useNavigation } from '@react-navigation/native';
@@ -12,12 +12,14 @@ import Card from './Card';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
 import { pickAudioFile } from '../../utils/pickDocument';
-import { uploadAudio } from '../../services/audioService';
 import { SeparationOption } from '../../models/separations-jobs/SeparationOption';
 import { requestSeparation } from '../../services/separationService';
 import { getClientId } from '../../utils/clientStorage';
 import { DocumentPickerAsset } from 'expo-document-picker';
 import { useSeparationWatcherController } from '../../utils/SeparationWatcherProvider';
+import RecentSeparationSection from './RecentSeparationSection';
+import { getAllSeparations } from '../../services/clientService';
+import { SeparationJob } from '../../models/separations-jobs/SeparationJob';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Initial'>;
 
@@ -25,8 +27,34 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Initial'>;
 export default function InitialScreen() {
   const [expandedCard, setExpandedCard] = useState<"EDITOR" | "SEPARATION" | null>(null);
   const { setWatchJobId, watchStatus } = useSeparationWatcherController();
+  const [jobs, setJobs] = useState<SeparationJob[]>([]);
 
   const navigation = useNavigation<NavigationProp>();
+
+  const fetchJobs = async() => {
+      const clientId = await getClientId();
+      if(!clientId) return;
+      try {
+        const data = await getAllSeparations(clientId);
+        const sortedData = data.sort(
+          (d1, d2) => new Date(d2.finishedAt).getTime() - new Date(d1.finishedAt).getTime()
+        );
+        const recentData = sortedData.slice(0, 4);
+        setJobs(recentData);
+      } catch (err) {
+        console.error("Greška pri dohvaćanju separacija:", err);
+      }
+    };
+
+  useEffect(() => {
+    fetchJobs();
+  }, []);
+
+  useEffect(() => {
+    if (watchStatus === 'DONE') {
+      void fetchJobs();
+    }
+  }, [watchStatus]);
 
   // const chooseFile = async (targetScreen: 'EditorScreen' | 'SeparationScreen') => {
   //     try {
@@ -120,6 +148,11 @@ export default function InitialScreen() {
         onPress={() => setExpandedCard(expandedCard === 'SEPARATION' ? null : 'SEPARATION')}
         onBrowseFile={handleUpload}
         isLoading={watchStatus !== null && watchStatus !== 'DONE' && watchStatus !== 'FAILED'}
+      />
+
+      <RecentSeparationSection 
+        jobs={jobs} 
+        onRefresh={fetchJobs}
       />
     </View>
   )
