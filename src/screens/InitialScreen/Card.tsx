@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import React, { ReactNode } from 'react';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
@@ -10,6 +10,7 @@ type CardProps = {
   expanded: boolean;
   onPress: () => void;
   onBrowseFile?: () => void;
+  isLoading?: boolean;
 };
 
 export default function Card({ 
@@ -20,6 +21,7 @@ export default function Card({
   expanded, 
   onPress,
   onBrowseFile,
+  isLoading,
 }: CardProps) {
   return (
     <TouchableOpacity 
@@ -34,16 +36,22 @@ export default function Card({
         <Text style={styles.optionText}>{description}</Text>
 
         {expanded && (
-          <View style={styles.extraOptions}>
-            <TouchableOpacity style={styles.extraButton} onPress={onBrowseFile} >
-              <MaterialIcons name="drive-folder-upload" style={styles.extraButtonIcon} />
-              <Text style={styles.extraText}>Browse file</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.extraButton}>
-              <MaterialIcons name="mic" style={styles.extraButtonIcon} />
-              <Text style={styles.extraText}>Record audio</Text>
-            </TouchableOpacity>
-          </View>
+          isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="white" />
+            </View>
+          ) : (
+            <View style={styles.extraOptions}>
+              <TouchableOpacity style={styles.extraButton} onPress={onBrowseFile} >
+                <MaterialIcons name="drive-folder-upload" style={styles.extraButtonIcon} />
+                <Text style={styles.extraText}>Browse file</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.extraButton}>
+                <MaterialIcons name="mic" style={styles.extraButtonIcon} />
+                <Text style={styles.extraText}>Record audio</Text>
+              </TouchableOpacity>
+            </View>
+          )
         )}
       </View>
     </TouchableOpacity>
@@ -83,6 +91,11 @@ const styles = StyleSheet.create({
     marginTop: 15,
     flexDirection: 'row',
     justifyContent: 'space-evenly',
+  },
+  loadingContainer: {
+    marginTop: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   extraButton: {
     backgroundColor: 'rgba(255,255,255,0.2)',

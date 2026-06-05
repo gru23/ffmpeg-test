@@ -9,6 +9,7 @@ import LoginScreen from './src/screens/LoginScreen';
 import { FFmpegKit } from 'ffmpeg-kit-react-native';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as DocumentPicker from "expo-document-picker";
 import { Asset } from 'expo-asset';
 import FiltersScreen from './src/screens/FiltersScreen';
 import VisualScreen from './src/screens/VisualScreen';
@@ -21,6 +22,8 @@ import { isStoredGoogleSessionValid } from './src/services/oAuthService';
 import { checkJwtValid } from './src/services/authService';
 import RegistrationScreen from './src/screens/RegistrationScreen';
 import AccountScreen from './src/screens/AccountScreen';
+import InitialScreen from './src/screens/InitialScreen/InitialScreen';
+import { SeparationWatcherProvider } from './src/utils/SeparationWatcherProvider';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -28,7 +31,7 @@ export type RootStackParamList = {
   Filters: undefined;
   Visual: undefined;
   SkiaVisual: { path: string };
-  SourceSeparation: undefined;
+  SourceSeparation: { file: DocumentPicker.DocumentPickerAsset };
   Picker: undefined;
   Recorder: undefined;
   Initial: undefined;
@@ -189,7 +192,7 @@ function HomeScreen({ navigation }: HomeScreenProps) {
       <Button title='Visual' onPress={() => navigation.navigate('Visual')} />
         <Button title='Skia Visual' onPress={() => navigation.navigate('SkiaVisual', { path: 'test2'})} />
       <Button title='Sandbox' onPress={listFiles} />
-      <Button title='SourceSeparation' onPress={() => navigation.navigate('SourceSeparation')} />
+      {/* <Button title='SourceSeparation' onPress={() => navigation.navigate('SourceSeparation')} /> */}
       <Button title='Picker' onPress={() => navigation.navigate('Picker')} />
       <Button title='Recorder' onPress={() => navigation.navigate('Recorder')} />
       <Button title='Initial' onPress={() => navigation.navigate('Initial')} />
@@ -263,21 +266,24 @@ export default function App() {
   //<Stack.Navigator initialRouteName={isAuthenticated ? 'Initial' : 'Login'}>
   return (
     <>
-      <NavigationContainer>
-        <Stack.Navigator>
-          <Stack.Screen name='Home' component={HomeScreen}/>
-          <Stack.Screen name='Login' component={LoginScreen} />
-          <Stack.Screen name='Filters' component={FiltersScreen} />
-          <Stack.Screen name='Visual' component={VisualScreen} />
-          <Stack.Screen name='SkiaVisual' component={SkiaVisualScreen} initialParams={{ path: 'test2' }} />
-          <Stack.Screen name='SourceSeparation' component={SourceSeparationPlayerScreen} />
-          <Stack.Screen name='Picker' component={PickerScreen} />
-          <Stack.Screen name='Recorder' component={RecorderScreen} />
-          <Stack.Screen name='Initial' component={InitialNavigator} />
-          <Stack.Screen name='Registration' component={RegistrationScreen} />
-          <Stack.Screen name='Account' component={AccountScreen} />
-        </Stack.Navigator>
-      </NavigationContainer>
+      <SeparationWatcherProvider>
+        <NavigationContainer>
+          <Stack.Navigator>
+            <Stack.Screen name='Home' component={HomeScreen}/>
+            <Stack.Screen name='Login' component={LoginScreen} />
+            <Stack.Screen name='Filters' component={FiltersScreen} />
+            <Stack.Screen name='Visual' component={VisualScreen} />
+            <Stack.Screen name='SkiaVisual' component={SkiaVisualScreen} initialParams={{ path: 'test2' }} />
+            <Stack.Screen name='SourceSeparation' component={SourceSeparationPlayerScreen} />
+            <Stack.Screen name='Picker' component={PickerScreen} />
+            <Stack.Screen name='Recorder' component={RecorderScreen} />
+            {/* <Stack.Screen name='Initial' component={InitialNavigator} /> */}
+            <Stack.Screen name='Initial' component={InitialScreen} />
+            <Stack.Screen name='Registration' component={RegistrationScreen} />
+            <Stack.Screen name='Account' component={AccountScreen} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </SeparationWatcherProvider>
       <Toast config={toastConfig} />
     </>
   );
