@@ -10,7 +10,7 @@ import { clearTokens, getAccessToken, getRefreshToken, saveTokens } from "../uti
 import { LogoutRequest } from "../models/auth/LogoutRequest";
 import { clearClient, getClient, saveClient } from "../utils/clientStorage";
 import { loginSchema } from "../utils/validationSchemas";
-import { showToast } from "../shared/ToastHelper";
+import { showToast } from "../shared/toastHelper";
 
 type LoginNavigationParamList = {
     Login: undefined;

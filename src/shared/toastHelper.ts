@@ -6,7 +6,7 @@ export const showToast = (
     text2?: string
 ) => {
   Toast.show({
-    visibilityTime: 1000,   // does not work
+    visibilityTime: 4000,   // does not work
     type,
     text1,
     text2,

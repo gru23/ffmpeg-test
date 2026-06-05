@@ -11,7 +11,7 @@ import { NativeStackNavigationProp  } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../App";
 import ConfirmDialog from "../components/ConfirmDialog";
 import InputField from "../components/InputField";
-import { showToast } from "../shared/ToastHelper";
+import { showToast } from "../shared/toastHelper";
 
 
 type NavigationProp = NativeStackNavigationProp <RootStackParamList, "Account">;
