@@ -40,7 +40,10 @@ export async function requestSeparation(
         const response = await api.post<SeparationStatusResponse>(
             API_SEPARATIONS_ENDPOINTS.separate, 
             formData,
-            { headers: { "Content-Type": "multipart/form-data" } }
+            { 
+                headers: { "Content-Type": "multipart/form-data" },
+                timeout: 2 * 60 * 1000,
+            }
         );
         return response.data;
     } catch(error: any) {
@@ -57,11 +60,11 @@ export async function getStatus(jobId: string): Promise<SeparationStatusResponse
     }
 };
 
-export async function downloadSeparation(jobId: string): Promise<Blob> {
+export async function downloadSeparation(jobId: string): Promise<ArrayBuffer> {
     try {
-        const response = await api.get<Blob>(
+        const response = await api.get<ArrayBuffer>(
             API_SEPARATIONS_ENDPOINTS.downloadSeparation(jobId),
-            { responseType: "blob" }
+            { responseType: "arraybuffer" }
         );
         return response.data;
     } catch(error: any) {

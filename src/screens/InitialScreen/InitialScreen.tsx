@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { Modal, StyleSheet, View, TouchableOpacity, Text } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -29,6 +29,9 @@ export default function InitialScreen() {
   const { setWatchJobId, watchStatus } = useSeparationWatcherController();
   const [jobs, setJobs] = useState<SeparationJob[]>([]);
 
+  const [modalOptionVisible, setModalOptionVisible] = useState(false);
+  const [separationOption, setSeparationOption] = useState<SeparationOption | null>(null);
+
   const navigation = useNavigation<NavigationProp>();
 
   const fetchJobs = async() => {
@@ -39,7 +42,7 @@ export default function InitialScreen() {
         const sortedData = data.sort(
           (d1, d2) => new Date(d2.finishedAt).getTime() - new Date(d1.finishedAt).getTime()
         );
-        const recentData = sortedData.slice(0, 4);
+        const recentData = sortedData.slice(0, 3);
         setJobs(recentData);
       } catch (err) {
         console.error("Greška pri dohvaćanju separacija:", err);
@@ -56,28 +59,15 @@ export default function InitialScreen() {
     }
   }, [watchStatus]);
 
-  // const chooseFile = async (targetScreen: 'EditorScreen' | 'SeparationScreen') => {
-  //     try {
-  //         const result = await DocumentPicker.getDocumentAsync({type: 'audio/*'});
-  //         console.log(result);
-  //         if(!result.canceled) {
-  //             const file = result.assets[0];
-  //             console.log(`Izabrani fajl je ${file.name}, putanja ${file.uri}`);
-  //             // const dest = FileSystem.documentDirectory + file.name;
-  //             const dest = FileSystem.documentDirectory + "choosen";
-  //             navigation.navigate(targetScreen, { file });
-  //             // await FileSystem.copyAsync({
-  //             //     from: file.uri,
-  //             //     to: dest,
-  //             // });
-  //         } else {
-  //         console.log("Korisnik je odustao od izbora fajla.");
-  //         }
-  //     }
-  //     catch(err) {
-  //         console.error("Greska pri odabiru fajla", err);
-  //     }
-  //   };
+  const handleOptionPress = async () => {
+    setModalOptionVisible(true);
+  };
+
+  const handleOptionSelection = async (option: SeparationOption) => {
+    setModalOptionVisible(false);
+    setSeparationOption(option);
+    await handleUpload();
+  };
 
   const handleUpload = async () => {
       try {
@@ -92,11 +82,11 @@ export default function InitialScreen() {
           const client = await getClientId();
           if(!client)
             return;
-          const formData = await makeFormData(client, SeparationOption.FOUR_STEMS, file);
+          if(!separationOption)
+            return;
+          const formData = await makeFormData(client, separationOption, file);
           const response = await requestSeparation(formData);
           setWatchJobId(response.jobId);
-          // mozda bez navigacije ako nece GUI biti blokiran tokom separacije
-          // navigation.navigate('SourceSeparation', { file });
           console.log("Upload response: ", response);
         } catch(err) {
           console.error("Upload error: ", err);
@@ -146,14 +136,37 @@ export default function InitialScreen() {
         icon={<MaterialIcons name="call-split" style={styles.optionTitleIcon} />}
         expanded={expandedCard === 'SEPARATION'}
         onPress={() => setExpandedCard(expandedCard === 'SEPARATION' ? null : 'SEPARATION')}
-        onBrowseFile={handleUpload}
+        onBrowseFile={handleOptionPress}
         isLoading={watchStatus !== null && watchStatus !== 'DONE' && watchStatus !== 'FAILED'}
       />
 
       <RecentSeparationSection 
         jobs={jobs} 
         onRefresh={fetchJobs}
+        onViewAllPress={() => navigation.navigate('AllSeparations')}
       />
+
+      <Modal
+        visible={modalOptionVisible}
+        transparent={true}
+        animationType='slide'
+        onRequestClose={() => setModalOptionVisible(false)}
+      >
+        <View style={styles.overlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.title}>Separation type</Text>
+            <TouchableOpacity onPress={() => handleOptionSelection(SeparationOption.VOCALS)}>
+              <Text style={styles.option}>VOCALS</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => handleOptionSelection(SeparationOption.FOUR_STEMS)}>
+              <Text style={styles.option}>FOUR STEMS</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setModalOptionVisible(false)}>
+              <Text style={styles.option}>Zatvori</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   )
 }
@@ -170,4 +183,20 @@ const styles = StyleSheet.create({
     fontSize: 34,
     color: 'white',
   },
+
+  item: { padding: 12, borderBottomWidth: 1, borderColor: "#ddd" },
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    backgroundColor: "white",
+    padding: 20,
+    borderRadius: 8,
+    width: "80%",
+  },
+  title: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
+  option: { fontSize: 16, marginVertical: 8 },
 });

@@ -1,20 +1,17 @@
 import { FlatList, View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { SeparationJob } from "../../models/separations-jobs/SeparationJob";
-import { deleteSeparation } from "../../services/separationService";
+import { deleteSeparationById } from "../../utils/separationStorage";
 
 type Props = {
     jobs: SeparationJob[];
     onRefresh?: () => void;
+    onViewAllPress?: () => void;
 }
 
-export default function RecentSeparationSection({ jobs, onRefresh }: Props) {
+export default function RecentSeparationSection({ jobs, onRefresh, onViewAllPress }: Props) {
   const handleDelete = async (id: string) => {
-    try {
-      await deleteSeparation(id);
-      onRefresh?.();
-    } catch (error) {
-      console.error("Error deleting separation:", error);
-    }
+    await deleteSeparationById(id);
+    onRefresh?.();
   };
 
   const renderEmpty = () => (
@@ -36,18 +33,29 @@ export default function RecentSeparationSection({ jobs, onRefresh }: Props) {
       renderItem={({item}) => {
         const finished = item.finishedAt ? new Date(item.finishedAt).toDateString() : '-';
         return (
-          <View style={styles.item}>
-            <View style={styles.info}>
-              <Text style={styles.title}>{item.title}</Text>
-              <Text style={styles.meta}>{finished} • {String(item.option)}</Text>
-            </View>
-            <TouchableOpacity style={styles.deleteArea} onPress={() => handleDelete(item.id)} >
-              <Text style={styles.deleteText}>x</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity 
+            style={styles.item}
+            onPress={() => console.log(item.id)}
+          >
+              <View style={styles.info}>
+                <Text style={styles.title}>{item.title}</Text>
+                <Text style={styles.meta}>{finished} • {String(item.option)}</Text>
+              </View>
+              <TouchableOpacity style={styles.deleteArea} onPress={() => handleDelete(item.id)} >
+                <Text style={styles.deleteText}>x</Text>
+              </TouchableOpacity>
+          </TouchableOpacity>
         );
       }}
       />
+
+      <TouchableOpacity
+        style={styles.viewAllContainer}
+        onPress={onViewAllPress}
+        disabled={!onViewAllPress}
+      >
+        <Text style={[styles.viewAllText, !onViewAllPress && styles.viewAllTextDisabled]}>View All</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -100,5 +108,17 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     color: '#666',
+  },
+  viewAllContainer: {
+    alignItems: "center",
+  },
+  viewAllText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+    textAlign: 'center',
+  },
+  viewAllTextDisabled: {
+    opacity: 0.5,
   },
 });

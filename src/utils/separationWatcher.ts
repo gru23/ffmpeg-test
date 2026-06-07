@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { showToast } from "../shared/toastHelper";
 import { getStatus } from "../services/separationService";
 import { SeparationStatus } from "../models/separations-jobs/SeparationStatus";
+import { downloadAndStoreSeparation } from "../services/fileService";
 
 // custom hook
 export function useSeparationWatcher(
@@ -35,6 +36,7 @@ export function useSeparationWatcher(
 
         if (normalizedStatus === "DONE") {
           showToast("success", "Separation finished", "Your audio file is ready.");
+          await downloadAndStoreSeparation(jobId);
           return;
         }
 

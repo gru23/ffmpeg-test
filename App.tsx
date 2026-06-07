@@ -23,6 +23,7 @@ import { checkJwtValid } from './src/services/authService';
 import RegistrationScreen from './src/screens/RegistrationScreen';
 import AccountScreen from './src/screens/AccountScreen';
 import InitialScreen from './src/screens/InitialScreen/InitialScreen';
+import AllSeparationsScreen from './src/screens/InitialScreen/AllSeparationsScreen';
 import { SeparationWatcherProvider } from './src/utils/SeparationWatcherProvider';
 
 export type RootStackParamList = {
@@ -37,6 +38,7 @@ export type RootStackParamList = {
   Initial: undefined;
   Registration: undefined;
   Account: undefined;
+  AllSeparations: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -279,6 +281,7 @@ export default function App() {
             <Stack.Screen name='Recorder' component={RecorderScreen} />
             {/* <Stack.Screen name='Initial' component={InitialNavigator} /> */}
             <Stack.Screen name='Initial' component={InitialScreen} />
+            <Stack.Screen name='AllSeparations' component={AllSeparationsScreen} />
             <Stack.Screen name='Registration' component={RegistrationScreen} />
             <Stack.Screen name='Account' component={AccountScreen} />
           </Stack.Navigator>
