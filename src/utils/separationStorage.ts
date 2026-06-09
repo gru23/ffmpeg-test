@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from 'expo-file-system/legacy';
 import { SeparationJob } from "../models/separations-jobs/SeparationJob";
 import { deleteSeparation } from "../services/separationService";
+import { downloadAndStoreSeparation } from "../services/fileService";
 
 const SEPARATIONS_KEYS = "separations";
 export const SEPARATIONS_PATH = FileSystem.documentDirectory + "separations";
@@ -55,4 +56,25 @@ export async function createSeparationDirectory(separationId: string) {
         await FileSystem.makeDirectoryAsync(destPath, { intermediates: true });
     }
   return destPath;
+}
+
+/**
+ * Prepares separation for player - checking are stems in storage or they have to be downloaded
+ * from server.
+ * @param separationId 
+ * @returns folder uri in sandbox which contains stems
+ */
+export async function prepareSeparationForPlayer(separationId: string) {
+  const folderPath = `${SEPARATIONS_PATH}/${separationId}`;
+  const info = await FileSystem.getInfoAsync(folderPath);
+
+  if (!info.exists) {
+    await downloadAndStoreSeparation(separationId);
+  }
+
+  return folderPath;
+}
+
+export async function getSeparationFolderPath(separationId: string) {
+  return `${SEPARATIONS_PATH}/${separationId}`;
 }

@@ -1,6 +1,12 @@
 import { FlatList, View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SeparationJob } from "../../models/separations-jobs/SeparationJob";
 import { deleteSeparationById } from "../../utils/separationStorage";
+
+type RootStackLikeParamList = {
+  SourceSeparation: { id: string };
+};
 
 type Props = {
     jobs: SeparationJob[];
@@ -9,6 +15,7 @@ type Props = {
 }
 
 export default function RecentSeparationSection({ jobs, onRefresh, onViewAllPress }: Props) {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackLikeParamList, 'SourceSeparation'>>();
   const handleDelete = async (id: string) => {
     await deleteSeparationById(id);
     onRefresh?.();
@@ -35,7 +42,7 @@ export default function RecentSeparationSection({ jobs, onRefresh, onViewAllPres
         return (
           <TouchableOpacity 
             style={styles.item}
-            onPress={() => console.log(item.id)}
+            onPress={() => navigation.navigate('SourceSeparation', { id: item.id })}
           >
               <View style={styles.info}>
                 <Text style={styles.title}>{item.title}</Text>

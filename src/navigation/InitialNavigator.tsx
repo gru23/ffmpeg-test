@@ -7,7 +7,7 @@ import * as DocumentPicker from 'expo-document-picker';
 export type InitialStackParamList = {
   InitialScreen: undefined;
   EditorScreen: { file: DocumentPicker.DocumentPickerAsset };
-  SeparationScreen: { file: DocumentPicker.DocumentPickerAsset };
+  SeparationScreen: { id: string };
 };
 
 const InitialStack = createNativeStackNavigator<InitialStackParamList>();

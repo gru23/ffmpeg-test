@@ -66,14 +66,16 @@ export default function InitialScreen() {
   const handleOptionSelection = async (option: SeparationOption) => {
     setModalOptionVisible(false);
     setSeparationOption(option);
-    await handleUpload();
+    await handleUpload(option);
   };
 
-  const handleUpload = async () => {
+  const handleUpload = async (optionParam?: SeparationOption) => {
       try {
+      setWatchJobId(null);
       const file = await pickAudioFile();
       if(file) {
-        const dest = FileSystem.documentDirectory + file.name;
+        const safeName = file.name || `song-${Date.now()}.mp3`;
+        const dest = FileSystem.documentDirectory + safeName;
         await FileSystem.copyAsync({
           from: file.uri,
           to: dest
@@ -82,9 +84,13 @@ export default function InitialScreen() {
           const client = await getClientId();
           if(!client)
             return;
-          if(!separationOption)
-            return;
-          const formData = await makeFormData(client, separationOption, file);
+          const usedOption = optionParam ?? SeparationOption.FOUR_STEMS;
+          const formData = await makeFormData(client, usedOption, {
+            ...file,
+            uri: dest,
+            name: safeName,
+          });
+          console.log("Sending separation request:", { name: safeName, uri: dest, size: file.size, type: file.mimeType });
           const response = await requestSeparation(formData);
           setWatchJobId(response.jobId);
           console.log("Upload response: ", response);

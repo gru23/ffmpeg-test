@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import React, { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 
 import { useSeparationWatcher } from "./separationWatcher";
 
@@ -14,9 +14,11 @@ export function SeparationWatcherProvider({ children }: { children: ReactNode })
   const [watchJobId, setWatchJobId] = useState<string | null>(null);
   const [watchStatus, setWatchStatus] = useState<string | null>(null);
 
-  useSeparationWatcher(watchJobId, 3000, (status) => {
+  const handleStatusChange = useCallback((status: string | null) => {
     setWatchStatus(status);
-  });
+  }, []);
+
+  useSeparationWatcher(watchJobId, 3000, handleStatusChange);
 
   const value = useMemo(
     () => ({ watchJobId, setWatchJobId, watchStatus }),

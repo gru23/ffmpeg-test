@@ -32,7 +32,7 @@ export type RootStackParamList = {
   Filters: undefined;
   Visual: undefined;
   SkiaVisual: { path: string };
-  SourceSeparation: { file: DocumentPicker.DocumentPickerAsset };
+  SourceSeparation: { id: string };
   Picker: undefined;
   Recorder: undefined;
   Initial: undefined;
@@ -169,6 +169,10 @@ function HomeScreen({ navigation }: HomeScreenProps) {
       const path = FileSystem.documentDirectory === null ? "" : FileSystem.documentDirectory;
       const files = await FileSystem.readDirectoryAsync(path);
       console.log("Sadržaj sandboxa:", files);
+
+      const pathSep = FileSystem.documentDirectory === null ? "" : FileSystem.documentDirectory + "/separations";
+      const sep = await FileSystem.readDirectoryAsync(pathSep);
+      console.log("Sadržaj separations:", sep);
     } catch (error) {
       console.log("Greška:", error);
     }
