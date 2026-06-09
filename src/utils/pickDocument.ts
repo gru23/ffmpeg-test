@@ -9,6 +9,7 @@ import * as DocumentPicker from 'expo-document-picker';
 export async function pickAudioFile(): Promise<DocumentPicker.DocumentPickerAsset | null> {
     const pick = await DocumentPicker.getDocumentAsync({
         type: 'audio/*',
+        copyToCacheDirectory: true,
     });
     if(pick.canceled)
         return null;

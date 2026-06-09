@@ -53,7 +53,10 @@ export async function requestSeparation(
 
 export async function getStatus(jobId: string): Promise<SeparationStatusResponse> {
     try {
-        const response = await api.get<SeparationStatusResponse>(API_SEPARATIONS_ENDPOINTS.status(jobId));
+        const response = await api.get<SeparationStatusResponse>(
+            API_SEPARATIONS_ENDPOINTS.status(jobId),
+            { timeout: 15000 }
+        );
         return response.data;
     } catch(error: any) {
         throw handleApiError(error);
@@ -64,7 +67,10 @@ export async function downloadSeparation(jobId: string): Promise<ArrayBuffer> {
     try {
         const response = await api.get<ArrayBuffer>(
             API_SEPARATIONS_ENDPOINTS.downloadSeparation(jobId),
-            { responseType: "arraybuffer" }
+            {
+                responseType: "arraybuffer",
+                timeout: 2 * 60 * 1000,
+            }
         );
         return response.data;
     } catch(error: any) {

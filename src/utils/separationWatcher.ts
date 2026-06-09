@@ -48,7 +48,12 @@ export function useSeparationWatcher(
         timeoutId = setTimeout(checkStatus, intervalMs);
       } catch (err) {
         console.error("Error checking status:", err);
-        onStatusChange?.(null);
+        if (cancelled) {
+          return;
+        }
+
+        onStatusChange?.("PROCESSING");
+        timeoutId = setTimeout(checkStatus, intervalMs);
       }
     };
 
