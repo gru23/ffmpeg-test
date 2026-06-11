@@ -20,6 +20,7 @@ import { useSeparationWatcherController } from '../../utils/SeparationWatcherPro
 import RecentSeparationSection from './RecentSeparationSection';
 import { getAllSeparations } from '../../services/clientService';
 import { SeparationJob } from '../../models/separations-jobs/SeparationJob';
+import { fetchSeparationMetaData, getSeparations } from '../../utils/separationStorage';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Initial'>;
 
@@ -35,18 +36,11 @@ export default function InitialScreen() {
   const navigation = useNavigation<NavigationProp>();
 
   const fetchJobs = async() => {
-      const clientId = await getClientId();
-      if(!clientId) return;
-      try {
-        const data = await getAllSeparations(clientId);
-        const sortedData = data.sort(
-          (d1, d2) => new Date(d2.finishedAt).getTime() - new Date(d1.finishedAt).getTime()
-        );
-        const recentData = sortedData.slice(0, 3);
-        setJobs(recentData);
-      } catch (err) {
-        console.error("Greška pri dohvaćanju separacija:", err);
-      }
+      const separations = await getSeparations();
+      const recent = [...separations].sort(
+        (s1, s2) => new Date(s2.finishedAt).getTime() - new Date(s1.finishedAt).getTime()
+      ).slice(0, 3);
+      setJobs(recent);
     };
 
   useEffect(() => {
