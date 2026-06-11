@@ -1,45 +1,81 @@
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
-import React, { useCallback, useEffect, useState } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { useRoute, RouteProp } from '@react-navigation/native';
 import { Audio } from 'expo-av';
 import { Sound } from 'expo-av/build/Audio';
-import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import Track from './Track';
-import { ICONS } from '../../constants';
+import { ICON_KEYS, ICONS } from '../../constants';
 import Slider from '@react-native-community/slider';
 import { MaterialIcons } from '@expo/vector-icons';
+import { getSeparationFolderPath, getSeparationOptionType } from '../../utils/separationStorage';
+import { SeparationOption } from '../../models/separations-jobs/SeparationOption';
+
+type SourceSeparationRouteParams = {
+  SourceSeparation: { id: string };
+};
 
 export default function SourceSeparationPlayerScreen() {
+  const route = useRoute<RouteProp<SourceSeparationRouteParams, 'SourceSeparation'>>();
+  const separationId = route.params?.id;
+
+  const [stemsLoading, setStemsLoading] = useState<boolean>(true);
+
   const [stems, setStems] = useState<Sound[]>([]);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [currentPosition, setCurrentPosition] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
-  const names = ['Vocals', 'Drums', 'Other', 'Bass'];
+  const [names, setNames] = useState<string[]>(['Vocals', 'Drums', 'Other', 'Bass']);
+  const [stemFiles, setStemFiles] = useState<string[]>(['vocals.wav', 'drums.wav', 'other.wav', 'bass.wav']);
+  // const names = ['Vocals', 'Drums', 'Other', 'Bass'];
+  // const stemFiles = ['vocals.wav', 'drums.wav', 'other.wav', 'bass.wav'];
 
   useEffect(() => {
-    copyStems();
     async function loadStems() {
-      const files = [
-        require("../../../assets/vocals.wav"),
-        require("../../../assets/drums.wav"),
-        require("../../../assets/other.wav"),
-        require("../../../assets/bass.wav"),
-      ];
+      console.log("1");
+      setStemsLoading(true);
+      let currentNames = ['Vocals','Drums','Other','Bass'];
+      let currentStemFiles = ['vocals.wav','drums.wav','other.wav','bass.wav'];
+      console.log("2 " + separationId);
+      const separationOptionType = await getSeparationOptionType(separationId);
+      console.log("Type: " + separationOptionType);
+      if(separationOptionType === SeparationOption.VOCALS) {
+        currentNames = ['Vocals','No vocals'];
+        currentStemFiles = ['vocals.wav','no_vocals.wav'];
+      }
+      console.log("3");
+      setNames(currentNames);
+      setStemFiles(currentStemFiles);
+      const path = await getSeparationFolderPath(separationId);
+      console.log("PATH: " + path);
+      const files = await Promise.all(
+        currentStemFiles.map(async (fileName) => {
+          const filePath = `${path}/${fileName}`;
+          const info = await FileSystem.getInfoAsync(filePath);
+          if (!info.exists) {
+            throw new Error(`Missing stem file: ${filePath}`);
+          }
+          return info.uri;
+        })
+      );
+      console.log("4");
       const loaded: Sound[] = [];
-      for (const file of files) {
+      for (const fileUri of files) {
         const sound = new Audio.Sound();
-        await sound.loadAsync(file, { shouldPlay: false });
+        await sound.loadAsync({ uri: fileUri }, { shouldPlay: false });
         loaded.push(sound);
       }
       setStems(loaded);
-
+      console.log("5");
       const status = await loaded[0].getStatusAsync();
       if(status.isLoaded){
         setDuration(status.durationMillis || 0);
       }
+      console.log("6");
+      setStemsLoading(false);
     }
     loadStems();
-
+    console.log("7");
     return () => {
       stems.forEach(s => s.unloadAsync());
     };
@@ -57,16 +93,6 @@ export default function SourceSeparationPlayerScreen() {
 
     return () => clearInterval(interval);
   }, [stems]);
-
-  const copyStems = useCallback(async () => {
-    const assets = [
-      Asset.fromModule(require('../../../assets/vocals.wav')),
-      Asset.fromModule(require('../../../assets/drums.wav')),
-      Asset.fromModule(require('../../../assets/other.wav')),
-      Asset.fromModule(require('../../../assets/bass.wav')),
-    ];
-    await Promise.all(assets.map(a => a.downloadAsync()));
-  }, []);
 
   const playAll = async () => {
     await Promise.all(stems.map(stem => stem.playAsync()));
@@ -116,10 +142,11 @@ export default function SourceSeparationPlayerScreen() {
             sound={stem}
             index={i}
             volume={1}
-            audioPath={(FileSystem.documentDirectory + names[i].toLowerCase() + '.wav').replace('file://', '')}
+            // audioPath={(FileSystem.documentDirectory + names[i].toLowerCase() + '.wav').replace('file://', '')}
+            audioPath={(FileSystem.documentDirectory + stemFiles[i])}
             onVolumeChange={setVolume}
-            icon={ICONS[names[i].toLowerCase()].normal}
-            muteIcon={ICONS[names[i].toLowerCase()].mute}
+            icon={ICONS[ICON_KEYS[names[i]]].normal}
+            muteIcon={ICONS[ICON_KEYS[names[i]]].mute}
             currentPosition={currentPosition}
             />
         ))}
@@ -158,8 +185,13 @@ export default function SourceSeparationPlayerScreen() {
           <MaterialIcons name='stop' size={52} color="white" />
         </TouchableOpacity>
       </View>
-
       
+      {stemsLoading && (
+        <View style={styles.overlay}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -195,5 +227,17 @@ const styles = StyleSheet.create({
   },
   scrollArea: {
     flex: 1,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(189, 200, 206, 0.75)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "bold",
   },
 });

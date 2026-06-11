@@ -15,4 +15,16 @@ export const ICONS: Record<string, { normal: any; mute: any }> = {
     normal: require('../../assets/icons/player/other-36.png'),
     mute: require('../../assets/icons/player/other-mute-36.png'),
   },
+  noVocals: {
+    normal: require('../../assets/icons/player/other-36.png'),
+    mute: require('../../assets/icons/player/other-mute-36.png'),
+  },
+};
+
+export const ICON_KEYS: Record<string, string> = {
+  Vocals: 'vocals',
+  Drums: 'drums',
+  Bass: 'bass',
+  Other: 'other',
+  'No vocals': 'noVocals'
 };
