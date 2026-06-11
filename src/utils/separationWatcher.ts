@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import { showToast } from "../shared/toastHelper";
-import { getStatus } from "../services/separationService";
+import { getById, getStatus } from "../services/separationService";
 import { SeparationStatus } from "../models/separations-jobs/SeparationStatus";
 import { downloadAndStoreSeparation } from "../services/fileService";
+import { addSeparation } from "./separationStorage";
 
 // custom hook
 export function useSeparationWatcher(
@@ -31,14 +32,17 @@ export function useSeparationWatcher(
 
         if (cancelled) return;
 
-        // inform whoever registered
-        onStatusChange?.(normalizedStatus ?? null);
-
         if (normalizedStatus === "DONE") {
           showToast("success", "Separation finished", "Your audio file is ready.");
           await downloadAndStoreSeparation(jobId);
+          const separation = await getById(jobId);
+          await addSeparation(separation);
+          onStatusChange?.(normalizedStatus ?? null);
           return;
         }
+
+        // inform whoever registered
+        onStatusChange?.(normalizedStatus ?? null);
 
         if (normalizedStatus === "FAILED") {
           showToast("error", "Separation failed", "Unknown error");

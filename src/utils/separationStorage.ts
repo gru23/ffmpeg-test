@@ -3,6 +3,9 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { SeparationJob } from "../models/separations-jobs/SeparationJob";
 import { deleteSeparation } from "../services/separationService";
 import { downloadAndStoreSeparation } from "../services/fileService";
+import { SeparationOption } from "../models/separations-jobs/SeparationOption";
+import { getAllSeparations } from "../services/clientService";
+import { getClientId } from "./clientStorage";
 
 const SEPARATIONS_KEYS = "separations";
 export const SEPARATIONS_PATH = FileSystem.documentDirectory + "separations";
@@ -44,8 +47,10 @@ export async function deleteSeparationById(id: string) {
 
 export async function addSeparation(job: SeparationJob) {
   const separations = await getSeparations();
-  separations.push(job);
-  await setSeparations(separations);
+  const updated = [...separations, job].sort(
+    (s1, s2) => new Date(s2.finishedAt).getTime() - new Date(s1.finishedAt).getTime()
+  );
+  await setSeparations(updated);
 }
 
 export async function createSeparationDirectory(separationId: string) {
@@ -77,4 +82,25 @@ export async function prepareSeparationForPlayer(separationId: string) {
 
 export async function getSeparationFolderPath(separationId: string) {
   return `${SEPARATIONS_PATH}/${separationId}`;
+}
+
+export async function getSeparationOptionType(separationId: string): Promise<SeparationOption> {
+  const separation = await getSeparationById(separationId);
+  return separation?.option ?? SeparationOption.FOUR_STEMS;
+}
+
+export async function fetchSeparationMetaData(): Promise<SeparationJob[]> {
+  const clientId = await getClientId();
+  if(!clientId) return [];
+  try {
+    const separations = await getAllSeparations(clientId);
+    const sorted = separations.sort(
+      (s1, s2) => new Date(s2.finishedAt).getTime() - new Date(s1.finishedAt).getTime()
+    );
+    await setSeparations(sorted);  
+    return sorted;
+  } catch(err) {
+    console.error("Error ocurred while fetching separations meta data: ", err);
+    return [];
+  }
 }

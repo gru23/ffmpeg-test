@@ -11,6 +11,7 @@ import { LogoutRequest } from "../models/auth/LogoutRequest";
 import { clearClient, getClient, saveClient } from "../utils/clientStorage";
 import { loginSchema } from "../utils/validationSchemas";
 import { showToast } from "../shared/toastHelper";
+import { fetchSeparationMetaData } from "../utils/separationStorage";
 
 type LoginNavigationParamList = {
     Login: undefined;
@@ -41,7 +42,7 @@ export default function LoginScreen() {
                 }
 
                 if (isValid) {
-                    navigation.replace("Initial");
+                    await proceedToInitial();
                     return;
                 }
             } finally {
@@ -63,7 +64,7 @@ export default function LoginScreen() {
             const token = await loginWithGoogle();
 
             if (token) {
-                navigation.replace("Initial");
+                await proceedToInitial();
             } else {
                 Alert.alert("Google Login", "Login failed or cancelled.");
             }
@@ -98,7 +99,7 @@ export default function LoginScreen() {
                 username: response.username,
                 email: response.email,
             });
-            navigation.replace("Initial");
+            await proceedToInitial();
         } catch (err: any) {
             if (err instanceof Yup.ValidationError) {
                 const newErrors: { [key: string]: string } = {};
@@ -116,6 +117,12 @@ export default function LoginScreen() {
             setLoading(false);
         }
     }
+
+    async function proceedToInitial() {
+        await fetchSeparationMetaData();
+        navigation.replace("Initial");
+    }
+
 
     async function handleLogout() {
         try {
