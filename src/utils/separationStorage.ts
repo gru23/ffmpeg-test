@@ -8,6 +8,8 @@ import { getAllSeparations } from "../services/clientService";
 import { getClientId } from "./clientStorage";
 
 const SEPARATIONS_KEYS = "separations";
+const LOCAL_STORING_KEY = "localSeparationsStoring";
+
 export const SEPARATIONS_PATH = FileSystem.documentDirectory + "separations";
 
 export async function setSeparations(separations: SeparationJob[]) {
@@ -29,6 +31,19 @@ export async function getSeparationById(id: string) {
     return separations.find(s => s.id === id) ?? null;
 };
 
+/**
+ * Deletes all separations from sandbox (FileSystem.documentDirectory/separations)
+ */
+export async function deleteAllLocalSeparations() {
+  const filesPaths = await FileSystem.readDirectoryAsync(SEPARATIONS_PATH);
+  for(const path of filesPaths)
+    FileSystem.deleteAsync(`${SEPARATIONS_PATH}/${path}`, { idempotent: true });
+}
+
+/**
+ * Deletes separation by id from app's sandbox, separation metadata and backend server.
+ * @param id 
+ */
 export async function deleteSeparationById(id: string) {
     try {
         await deleteSeparation(id);
@@ -51,6 +66,15 @@ export async function addSeparation(job: SeparationJob) {
     (s1, s2) => new Date(s2.finishedAt).getTime() - new Date(s1.finishedAt).getTime()
   );
   await setSeparations(updated);
+}
+
+export async function setLocalSeparationStoring(isEnabled: boolean) {
+  await AsyncStorage.setItem(LOCAL_STORING_KEY, JSON.stringify(isEnabled));
+}
+
+export async function isLocalSeparationsStoringEnabled() { 
+  const raw = await AsyncStorage.getItem(LOCAL_STORING_KEY);
+  return raw ? JSON.parse(raw) : true;  // makes local storing enabled by default
 }
 
 export async function createSeparationDirectory(separationId: string) {

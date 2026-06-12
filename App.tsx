@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View, Button, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { createNativeStackNavigator, NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { NavigationContainer } from '@react-navigation/native';
+import { MenuProvider } from 'react-native-popup-menu';
 import Toast, { BaseToast, ToastConfig } from 'react-native-toast-message';
 import LoginScreen from './src/screens/LoginScreen';
 
@@ -25,6 +26,10 @@ import AccountScreen from './src/screens/AccountScreen';
 import InitialScreen from './src/screens/InitialScreen/InitialScreen';
 import AllSeparationsScreen from './src/screens/InitialScreen/AllSeparationsScreen';
 import { SeparationWatcherProvider } from './src/utils/SeparationWatcherProvider';
+import { SEPARATIONS_PATH } from './src/utils/separationStorage';
+import SettingsScreen from './src/screens/DrawerScreen/SettingsScreen';
+// import { createDrawerNavigator } from '@react-navigation/drawer';
+// import { DrawerNavigator } from './src/navigation/DrawerNavigator';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -39,9 +44,11 @@ export type RootStackParamList = {
   Registration: undefined;
   Account: undefined;
   AllSeparations: undefined;
+  Settings: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+// const Drawer = createDrawerNavigator();
 
 type HomeScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -117,6 +124,12 @@ function HomeScreen({ navigation }: HomeScreenProps) {
     copyInputAsset();
   }, [copyInputAsset]);
 
+  async function deleteStems() {
+    const files = await FileSystem.readDirectoryAsync(SEPARATIONS_PATH);
+    for(const file of files) {
+      await FileSystem.deleteAsync(`${SEPARATIONS_PATH}/${file}`, {idempotent: true});
+    }
+  }
 
   async function playOriginal() {
     try {
@@ -203,6 +216,8 @@ function HomeScreen({ navigation }: HomeScreenProps) {
       <Button title='Recorder' onPress={() => navigation.navigate('Recorder')} />
       <Button title='Initial' onPress={() => navigation.navigate('Initial')} />
       <Button title='Account' onPress={() => navigation.navigate('Account')} />
+      <Button title='Delete Stems' onPress={deleteStems} />
+      <Button title='Settings' onPress={() => navigation.navigate('Settings')} />
       <StatusBar style='auto' />
     </View>
   );
@@ -272,25 +287,29 @@ export default function App() {
   //<Stack.Navigator initialRouteName={isAuthenticated ? 'Initial' : 'Login'}>
   return (
     <>
-      <SeparationWatcherProvider>
-        <NavigationContainer>
-          <Stack.Navigator>
-            <Stack.Screen name='Home' component={HomeScreen}/>
-            <Stack.Screen name='Login' component={LoginScreen} />
-            <Stack.Screen name='Filters' component={FiltersScreen} />
-            <Stack.Screen name='Visual' component={VisualScreen} />
-            <Stack.Screen name='SkiaVisual' component={SkiaVisualScreen} initialParams={{ path: 'test2' }} />
-            <Stack.Screen name='SourceSeparation' component={SourceSeparationPlayerScreen} />
-            <Stack.Screen name='Picker' component={PickerScreen} />
-            <Stack.Screen name='Recorder' component={RecorderScreen} />
-            {/* <Stack.Screen name='Initial' component={InitialNavigator} /> */}
-            <Stack.Screen name='Initial' component={InitialScreen} />
-            <Stack.Screen name='AllSeparations' component={AllSeparationsScreen} />
-            <Stack.Screen name='Registration' component={RegistrationScreen} />
-            <Stack.Screen name='Account' component={AccountScreen} />
-          </Stack.Navigator>
-        </NavigationContainer>
-      </SeparationWatcherProvider>
+      <MenuProvider>
+        <SeparationWatcherProvider>
+          <NavigationContainer>
+            <Stack.Navigator>
+              <Stack.Screen name='Home' component={HomeScreen}/>
+              <Stack.Screen name='Login' component={LoginScreen} />
+              <Stack.Screen name='Filters' component={FiltersScreen} />
+              <Stack.Screen name='Visual' component={VisualScreen} />
+              <Stack.Screen name='SkiaVisual' component={SkiaVisualScreen} initialParams={{ path: 'test2' }} />
+              <Stack.Screen name='SourceSeparation' component={SourceSeparationPlayerScreen} options={{ headerShown: false }} />
+              <Stack.Screen name='Picker' component={PickerScreen} />
+              <Stack.Screen name='Recorder' component={RecorderScreen} />
+              {/* <Stack.Screen name='Initial' component={InitialNavigator} /> */}
+              <Stack.Screen name='Initial' component={InitialScreen} />
+              <Stack.Screen name='AllSeparations' component={AllSeparationsScreen} />
+              <Stack.Screen name='Registration' component={RegistrationScreen} />
+              <Stack.Screen name='Account' component={AccountScreen} />
+              {/* <Stack.Screen name='Initial' component={DrawerNavigator} options={{headerShown: false}} /> */}
+              <Stack.Screen name='Settings' component={SettingsScreen} />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </SeparationWatcherProvider>
+      </MenuProvider>
       <Toast config={toastConfig} />
     </>
   );
