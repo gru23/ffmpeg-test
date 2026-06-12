@@ -7,6 +7,7 @@ import { Audio } from 'expo-av';
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import SimpleLineIcons from '@expo/vector-icons/SimpleLineIcons';
 import Card from './Card';
 
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -113,6 +114,12 @@ export default function InitialScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.menuContainer}>
+        <TouchableOpacity>
+          {/* <MaterialIcons name='menu' size={28} color="black" /> */}
+          <SimpleLineIcons name="menu" size={24} color="#1561bd" />
+        </TouchableOpacity>
+      </View>
       <Card
         color="#4f90ff"
         title="EDITOR"
@@ -178,6 +185,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 100,
     backgroundColor: '#f5f5f5',
+  },
+  menuContainer: {
+    // flexDirection: 'row',
+    // justifyContent: 'flex-end',
+    // alignItems: 'center',
+    position: 'absolute',
+    right: 20,
+    top: 20,
   },
   optionTitleIcon: {
     fontSize: 34,
