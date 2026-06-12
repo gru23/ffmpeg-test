@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import { useRoute, RouteProp } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Audio } from 'expo-av';
 import { Sound } from 'expo-av/build/Audio';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -8,8 +9,10 @@ import Track from './Track';
 import { ICON_KEYS, ICONS } from '../../constants';
 import Slider from '@react-native-community/slider';
 import { MaterialIcons } from '@expo/vector-icons';
-import { getSeparationFolderPath, getSeparationOptionType } from '../../utils/separationStorage';
+import SimpleLineIcons from '@expo/vector-icons/SimpleLineIcons';
+import { getSeparationFolderPath, getSeparationOptionType, prepareSeparationForPlayer } from '../../utils/separationStorage';
 import { SeparationOption } from '../../models/separations-jobs/SeparationOption';
+import { Menu, MenuOption, MenuOptions, MenuTrigger } from 'react-native-popup-menu';
 
 type SourceSeparationRouteParams = {
   SourceSeparation: { id: string };
@@ -20,6 +23,7 @@ export default function SourceSeparationPlayerScreen() {
   const separationId = route.params?.id;
 
   const [stemsLoading, setStemsLoading] = useState<boolean>(true);
+  const [loadingText, setLoadingText] = useState<string>("");
 
   const [stems, setStems] = useState<Sound[]>([]);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -34,6 +38,9 @@ export default function SourceSeparationPlayerScreen() {
     async function loadStems() {
       console.log("1");
       setStemsLoading(true);
+      setLoadingText("Downloading stems...");
+      await prepareSeparationForPlayer(separationId);
+      setLoadingText("Loading...");
       let currentNames = ['Vocals','Drums','Other','Bass'];
       let currentStemFiles = ['vocals.wav','drums.wav','other.wav','bass.wav'];
       console.log("2 " + separationId);
@@ -73,7 +80,7 @@ export default function SourceSeparationPlayerScreen() {
       }
       console.log("6");
       setStemsLoading(false);
-    }
+    };
     loadStems();
     console.log("7");
     return () => {
@@ -133,7 +140,25 @@ export default function SourceSeparationPlayerScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.menuContainer}>
+        <Menu>
+          <MenuTrigger>
+            <SimpleLineIcons name="menu" size={24} color="#efefef" />
+          </MenuTrigger>
+          <MenuOptions customStyles={optionsStyles}>
+            <MenuOption onSelect={() => console.log("Export stems")}>
+              <Text style={optionsStyles.optionText}>Export stems</Text>
+            </MenuOption>
+            <MenuOption onSelect={() => console.log("Initial screen")}>
+              <Text style={optionsStyles.optionText}>Home</Text>
+            </MenuOption>
+            <MenuOption onSelect={() => console.log("Cancel")}>
+              <Text style={optionsStyles.optionText}>Cancel</Text>
+            </MenuOption>
+          </MenuOptions>
+        </Menu>
+    </View>
       <ScrollView style={styles.scrollArea}>
         {stems.map((stem, i) => (
             <Track
@@ -143,7 +168,7 @@ export default function SourceSeparationPlayerScreen() {
             index={i}
             volume={1}
             // audioPath={(FileSystem.documentDirectory + names[i].toLowerCase() + '.wav').replace('file://', '')}
-            audioPath={(FileSystem.documentDirectory + stemFiles[i])}
+            audioPath={(FileSystem.documentDirectory + stemFiles[i]).replace('file://', '')}
             onVolumeChange={setVolume}
             icon={ICONS[ICON_KEYS[names[i]]].normal}
             muteIcon={ICONS[ICON_KEYS[names[i]]].mute}
@@ -189,10 +214,10 @@ export default function SourceSeparationPlayerScreen() {
       {stemsLoading && (
         <View style={styles.overlay}>
           <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Loading...</Text>
+          <Text style={styles.loadingText}>{loadingText}</Text>
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -240,4 +265,28 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
   },
+  menuContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    marginLeft: 10,
+    marginBottom: 10,
+  },
 });
+
+const optionsStyles = {
+  optionsContainer: {
+    backgroundColor: '#376994',   // boja pozadine menija
+    padding: 10,
+    borderRadius: 8,
+    width: 200,                   // širina menija
+  },
+  optionWrapper: {
+    margin: 5,
+  },
+  optionText: {
+    fontSize: 18,                 // veličina slova
+    color: '#fff',                // boja teksta
+    fontWeight: 'bold' as 'bold',
+  },
+};
