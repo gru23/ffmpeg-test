@@ -8,6 +8,7 @@ type InputFieldProps = {
   secureTextEntry?: boolean;
   keyboardType?: "default" | "email-address" | "numeric";
   error?: string;
+  editable?: boolean;
 };
 
 export default function InputField({
@@ -17,6 +18,7 @@ export default function InputField({
   secureTextEntry = false,
   keyboardType = "default",
   error,
+  editable = true
 }: InputFieldProps) {
   return (
     <View style={styles.inputContainer}>
@@ -27,6 +29,7 @@ export default function InputField({
         onChangeText={onChangeText}
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
+        editable={editable}
       />
       <View style={styles.errorContainer}>
         <Text style={styles.error}>{error || " "}</Text>

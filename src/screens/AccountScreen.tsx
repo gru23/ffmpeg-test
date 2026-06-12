@@ -176,6 +176,7 @@ export default function ProfileScreen() {
             value={email}
             onChangeText={setEmail}
             error={errors.email}
+            editable={false}
           />
 
           <Button title="Update account" onPress={handleUpdateAccount} disabled={!isChanged} />
@@ -214,8 +215,9 @@ export default function ProfileScreen() {
 
           <Button title="Change password" onPress={handleChangePassword} />
         </View>
-        <View>
-          <Button title="Delete Account" color="red" onPress={() => setShowDialog(true)} />
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Delete account</Text>
+          <Button title="Delete" color="red" onPress={() => setShowDialog(true)} />
         </View>
       </ScrollView>
       {loading && (
