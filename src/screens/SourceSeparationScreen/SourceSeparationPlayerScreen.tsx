@@ -10,7 +10,7 @@ import { ICON_KEYS, ICONS } from '../../constants';
 import Slider from '@react-native-community/slider';
 import { MaterialIcons } from '@expo/vector-icons';
 import SimpleLineIcons from '@expo/vector-icons/SimpleLineIcons';
-import { getSeparationFolderPath, getSeparationOptionType, prepareSeparationForPlayer } from '../../utils/separationStorage';
+import { deleteLocalSeparationById, getSeparationFolderPath, getSeparationOptionType, isLocalSeparationsStoringEnabled, prepareSeparationForPlayer } from '../../utils/separationStorage';
 import { SeparationOption } from '../../models/separations-jobs/SeparationOption';
 import { Menu, MenuOption, MenuOptions, MenuTrigger } from 'react-native-popup-menu';
 
@@ -85,6 +85,11 @@ export default function SourceSeparationPlayerScreen() {
     console.log("7");
     return () => {
       stems.forEach(s => s.unloadAsync());
+      (async () => {
+        if(await isLocalSeparationsStoringEnabled()) {
+          await deleteLocalSeparationById(separationId);
+        }
+      })();
     };
   }, []);
 

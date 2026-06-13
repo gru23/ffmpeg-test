@@ -41,6 +41,13 @@ export async function deleteAllLocalSeparations() {
 }
 
 /**
+ * Delete separation from sandbox (FileSystem.documentDirectory/separations/sep-id)
+ */
+export async function deleteLocalSeparationById(id: string) {
+    FileSystem.deleteAsync(`${SEPARATIONS_PATH}/${id}`, { idempotent: true });
+}
+
+/**
  * Deletes separation by id from app's sandbox, separation metadata and backend server.
  * @param id 
  */

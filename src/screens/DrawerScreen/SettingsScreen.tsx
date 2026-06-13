@@ -30,7 +30,7 @@ export default function SettingsScreen() {
     };
 
     const removeSeparations = async () => {
-        // await deleteAllLocalSeparations();
+        await deleteAllLocalSeparations();
         setShowDeleteModal(false);
         showToast('success', 'Successfully deleted', 'Local separations have been deleted.');
     }
