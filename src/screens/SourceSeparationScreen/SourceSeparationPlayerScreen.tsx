@@ -86,7 +86,8 @@ export default function SourceSeparationPlayerScreen() {
     return () => {
       stems.forEach(s => s.unloadAsync());
       (async () => {
-        if(await isLocalSeparationsStoringEnabled()) {
+        const isEnabled = await isLocalSeparationsStoringEnabled();
+        if(!isEnabled) {
           await deleteLocalSeparationById(separationId);
         }
       })();
