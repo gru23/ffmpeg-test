@@ -38,7 +38,7 @@ export default function SettingsScreen() {
     return (
         <View style={styles.container}>
             <View style={styles.row}>
-                <Text style={styles.label}>Local separations storing</Text>
+                <Text style={styles.label}>{`Local separation storing ${localStoring ? 'enabled' : 'disabled'}`}</Text>
                 <Switch 
                     value={localStoring}
                     onValueChange={handleLocalStoringChange}
