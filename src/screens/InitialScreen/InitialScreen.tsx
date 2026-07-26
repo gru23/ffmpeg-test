@@ -64,6 +64,10 @@ export default function InitialScreen() {
     await handleUpload(option);
   };
 
+  const handleRecordForSeparation = async() => {
+
+  }
+
   const handleUpload = async (optionParam?: SeparationOption) => {
       try {
       setWatchJobId(null);
@@ -134,6 +138,9 @@ export default function InitialScreen() {
             navigation.navigate('Filters');
           }
         }}
+        onRecord={async () => {
+          navigation.replace('Recorder', { nextScreen: 'editor', separationType: SeparationOption.FOUR_STEMS })
+        }}
       />
 
       <Card
@@ -144,6 +151,9 @@ export default function InitialScreen() {
         expanded={expandedCard === 'SEPARATION'}
         onPress={() => setExpandedCard(expandedCard === 'SEPARATION' ? null : 'SEPARATION')}
         onBrowseFile={handleOptionPress}
+        onRecord={async () => {
+          navigation.replace('Recorder', { nextScreen: 'separation', separationType: SeparationOption.FOUR_STEMS })
+        }}
         isLoading={watchStatus !== null && watchStatus !== 'DONE' && watchStatus !== 'FAILED'}
       />
 

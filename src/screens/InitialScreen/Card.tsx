@@ -9,6 +9,7 @@ type CardProps = {
   color: string;
   expanded: boolean;
   onPress: () => void;
+  onRecord: () => void;
   onBrowseFile?: () => void;
   isLoading?: boolean;
 };
@@ -21,6 +22,7 @@ export default function Card({
   expanded, 
   onPress,
   onBrowseFile,
+  onRecord,
   isLoading,
 }: CardProps) {
   return (
@@ -46,7 +48,7 @@ export default function Card({
                 <MaterialIcons name="drive-folder-upload" style={styles.extraButtonIcon} />
                 <Text style={styles.extraText}>Browse file</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.extraButton}>
+              <TouchableOpacity style={styles.extraButton} onPress={onRecord}>
                 <MaterialIcons name="mic" style={styles.extraButtonIcon} />
                 <Text style={styles.extraText}>Record audio</Text>
               </TouchableOpacity>

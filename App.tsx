@@ -28,6 +28,7 @@ import AllSeparationsScreen from './src/screens/InitialScreen/AllSeparationsScre
 import { SeparationWatcherProvider } from './src/utils/SeparationWatcherProvider';
 import { SEPARATIONS_PATH } from './src/utils/separationStorage';
 import SettingsScreen from './src/screens/DrawerScreen/SettingsScreen';
+import { SeparationOption } from './src/models/separations-jobs/SeparationOption';
 // import { createDrawerNavigator } from '@react-navigation/drawer';
 // import { DrawerNavigator } from './src/navigation/DrawerNavigator';
 
@@ -39,7 +40,7 @@ export type RootStackParamList = {
   SkiaVisual: { path: string };
   SourceSeparation: { id: string };
   Picker: undefined;
-  Recorder: undefined;
+  Recorder: { nextScreen: string, separationType: SeparationOption };
   Initial: undefined;
   Registration: undefined;
   Account: undefined;
@@ -213,7 +214,7 @@ function HomeScreen({ navigation }: HomeScreenProps) {
       <Button title='Sandbox' onPress={listFiles} />
       {/* <Button title='SourceSeparation' onPress={() => navigation.navigate('SourceSeparation')} /> */}
       <Button title='Picker' onPress={() => navigation.navigate('Picker')} />
-      <Button title='Recorder' onPress={() => navigation.navigate('Recorder')} />
+      <Button title='Recorder' onPress={() => navigation.navigate('Recorder', { nextScreen: 'nesto iz App', separationType: SeparationOption.FOUR_STEMS })} />
       <Button title='Initial' onPress={() => navigation.navigate('Initial')} />
       <Button title='Account' onPress={() => navigation.navigate('Account')} />
       <Button title='Delete Stems' onPress={deleteStems} />

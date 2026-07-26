@@ -13,6 +13,7 @@ import SimpleLineIcons from '@expo/vector-icons/SimpleLineIcons';
 import { deleteLocalSeparationById, getSeparationFolderPath, getSeparationOptionType, isLocalSeparationsStoringEnabled, prepareSeparationForPlayer } from '../../utils/separationStorage';
 import { SeparationOption } from '../../models/separations-jobs/SeparationOption';
 import { Menu, MenuOption, MenuOptions, MenuTrigger } from 'react-native-popup-menu';
+import { exportSeparation } from '../../utils/pickDocument';
 
 type SourceSeparationRouteParams = {
   SourceSeparation: { id: string };
@@ -153,7 +154,7 @@ export default function SourceSeparationPlayerScreen() {
             <SimpleLineIcons name="menu" size={24} color="#efefef" />
           </MenuTrigger>
           <MenuOptions customStyles={optionsStyles}>
-            <MenuOption onSelect={() => console.log("Export stems")}>
+            <MenuOption onSelect={async () => {console.log("export"); await exportSeparation(separationId);}}>
               <Text style={optionsStyles.optionText}>Export stems</Text>
             </MenuOption>
             <MenuOption onSelect={() => console.log("Initial screen")}>
