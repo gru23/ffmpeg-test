@@ -27,6 +27,7 @@ export default function SourceSeparationPlayerScreen() {
   const [loadingText, setLoadingText] = useState<string>("");
 
   const [stems, setStems] = useState<Sound[]>([]);
+  const [stemPaths, setStemPaths] = useState<string[]>([]);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [currentPosition, setCurrentPosition] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
@@ -66,6 +67,7 @@ export default function SourceSeparationPlayerScreen() {
           return info.uri;
         })
       );
+      setStemPaths(files.map((fileUri) => fileUri.replace('file://', '')));
       console.log("4");
       const loaded: Sound[] = [];
       for (const fileUri of files) {
@@ -175,7 +177,8 @@ export default function SourceSeparationPlayerScreen() {
             index={i}
             volume={1}
             // audioPath={(FileSystem.documentDirectory + names[i].toLowerCase() + '.wav').replace('file://', '')}
-            audioPath={(FileSystem.documentDirectory + stemFiles[i]).replace('file://', '')}
+            // audioPath={(FileSystem.documentDirectory + stemFiles[i]).replace('file://', '')}
+            audioPath={stemPaths[i] ?? ''}
             onVolumeChange={setVolume}
             icon={ICONS[ICON_KEYS[names[i]]].normal}
             muteIcon={ICONS[ICON_KEYS[names[i]]].mute}
