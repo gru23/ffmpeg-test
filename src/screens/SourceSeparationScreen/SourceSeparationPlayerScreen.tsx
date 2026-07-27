@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
-import React, { useEffect, useState } from 'react';
-import { useRoute, RouteProp } from '@react-navigation/native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect, useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Audio } from 'expo-av';
 import { Sound } from 'expo-av/build/Audio';
@@ -21,6 +21,7 @@ type SourceSeparationRouteParams = {
 
 export default function SourceSeparationPlayerScreen() {
   const route = useRoute<RouteProp<SourceSeparationRouteParams, 'SourceSeparation'>>();
+  const navigation = useNavigation();
   const separationId = route.params?.id;
 
   const [stemsLoading, setStemsLoading] = useState<boolean>(true);
@@ -33,8 +34,71 @@ export default function SourceSeparationPlayerScreen() {
   const [duration, setDuration] = useState<number>(0);
   const [names, setNames] = useState<string[]>(['Vocals', 'Drums', 'Other', 'Bass']);
   const [stemFiles, setStemFiles] = useState<string[]>(['vocals.wav', 'drums.wav', 'other.wav', 'bass.wav']);
+  const stemsRef = useRef<Sound[]>([]);
   // const names = ['Vocals', 'Drums', 'Other', 'Bass'];
   // const stemFiles = ['vocals.wav', 'drums.wav', 'other.wav', 'bass.wav'];
+
+  const stopAndUnloadStems = useCallback(async () => {
+    const activeStems = stemsRef.current;
+
+    stemsRef.current = [];
+    setIsPlaying(false);
+
+    await Promise.all(
+      activeStems.map(async stem => {
+        try {
+          await stem.stopAsync();
+        } catch (error) {
+          console.log('Error stopping stem playback:', error);
+        }
+      })
+    );
+
+    await Promise.all(
+      activeStems.map(async stem => {
+        try {
+          const status = await stem.getStatusAsync();
+          if (status.isLoaded) {
+            await stem.unloadAsync();
+          }
+        } catch (error) {
+          console.log('Error stopping stem playback:', error);
+        }
+      })
+    );
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        void stopAndUnloadStems();
+      };
+    }, [stopAndUnloadStems])
+  );
+
+  useEffect(() => {
+    const nativeNavigation = navigation as any;
+
+    const removeBlurListener = nativeNavigation.addListener('blur', () => {
+      void stopAndUnloadStems();
+    });
+
+    const removeTransitionStartListener = nativeNavigation.addListener('transitionStart', (event: any) => {
+      if (event?.data?.closing) {
+        void stopAndUnloadStems();
+      }
+    });
+
+    const removeBeforeRemoveListener = nativeNavigation.addListener('beforeRemove', () => {
+      void stopAndUnloadStems();
+    });
+
+    return () => {
+      removeBlurListener();
+      removeTransitionStartListener();
+      removeBeforeRemoveListener();
+    };
+  }, [navigation, stopAndUnloadStems]);
 
   useEffect(() => {
     async function loadStems() {
@@ -76,6 +140,7 @@ export default function SourceSeparationPlayerScreen() {
         loaded.push(sound);
       }
       setStems(loaded);
+      stemsRef.current = loaded;
       console.log("5");
       const status = await loaded[0].getStatusAsync();
       if(status.isLoaded){
@@ -87,7 +152,7 @@ export default function SourceSeparationPlayerScreen() {
     loadStems();
     console.log("7");
     return () => {
-      stems.forEach(s => s.unloadAsync());
+      void stopAndUnloadStems();
       (async () => {
         const isEnabled = await isLocalSeparationsStoringEnabled();
         if(!isEnabled) {
