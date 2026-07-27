@@ -188,7 +188,10 @@ export default function RecorderScreen() {
       setWatchJobId(uploadResult.jobId)
       setNameModalVisible(false)
       setPendingUpload(null)
-      navigation.navigate('Initial')
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Initial' }],
+      })
     }
   }, [navigation, pendingUpload, recordingName, route.params?.separationType, setWatchJobId])
 

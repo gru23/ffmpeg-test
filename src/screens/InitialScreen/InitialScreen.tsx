@@ -31,6 +31,7 @@ export default function InitialScreen() {
 
   const [modalOptionVisible, setModalOptionVisible] = useState(false);
   const [separationOption, setSeparationOption] = useState<SeparationOption | null>(null);
+  const [separationAction, setSeparationAction] = useState<'browse' | 'record' | null>(null);
 
   const navigation = useNavigation<NavigationProp>();
 
@@ -53,17 +54,25 @@ export default function InitialScreen() {
   }, [watchStatus]);
 
   const handleOptionPress = async () => {
+    setSeparationAction('browse');
     setModalOptionVisible(true);
   };
 
   const handleOptionSelection = async (option: SeparationOption) => {
     setModalOptionVisible(false);
     setSeparationOption(option);
+
+    if (separationAction === 'record') {
+      navigation.replace('Recorder', { nextScreen: 'separation', separationType: option })
+      return;
+    }
+
     await handleUpload(option);
   };
 
   const handleRecordForSeparation = async() => {
-
+    setSeparationAction('record');
+    setModalOptionVisible(true);
   }
 
   const handleUpload = async (optionParam?: SeparationOption) => {
@@ -129,9 +138,7 @@ export default function InitialScreen() {
         expanded={expandedCard === 'SEPARATION'}
         onPress={() => setExpandedCard(expandedCard === 'SEPARATION' ? null : 'SEPARATION')}
         onBrowseFile={handleOptionPress}
-        onRecord={async () => {
-          navigation.replace('Recorder', { nextScreen: 'separation', separationType: SeparationOption.FOUR_STEMS })
-        }}
+        onRecord={handleRecordForSeparation}
         isLoading={watchStatus !== null && watchStatus !== 'DONE' && watchStatus !== 'FAILED'}
       />
 
