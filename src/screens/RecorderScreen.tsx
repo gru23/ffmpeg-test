@@ -1,15 +1,30 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Alert,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Audio } from 'expo-av'
 import { useAudioRecorder, RecordingConfig, AudioAnalysis } from '@siteed/expo-audio-studio'
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native'
+import { NativeStackNavigationProp } from '@react-navigation/native-stack'
+
+import { RootStackParamList } from '../../App'
+import { submitSeparationRequest } from '../utils/pickDocument'
+import { useSeparationWatcherController } from '../utils/SeparationWatcherProvider'
+import { SeparationOption } from '../models/separations-jobs/SeparationOption'
+
+type PendingUpload = {
+  uri: string
+  mimeType: string
+  defaultName: string
+}
 
 const RECORDING_CONFIG: RecordingConfig = {
   sampleRate: 44100,
@@ -69,6 +84,10 @@ function Waveform({ analysisData }: WaveformProps) {
 }
 
 export default function RecorderScreen() {
+  const route = useRoute<RouteProp<RootStackParamList, 'Recorder'>>()
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>()
+  const { setWatchJobId } = useSeparationWatcherController()
+
   const {
     startRecording,
     stopRecording,
@@ -83,6 +102,9 @@ export default function RecorderScreen() {
   const [recordingUri, setRecordingUri] = useState<string | null>(null)
   const [hasPermission, setHasPermission] = useState<boolean | null>(null)
   const [finalDuration, setFinalDuration] = useState<number>(0)
+  const [pendingUpload, setPendingUpload] = useState<PendingUpload | null>(null)
+  const [recordingName, setRecordingName] = useState<string>('')
+  const [nameModalVisible, setNameModalVisible] = useState<boolean>(false)
 
   useEffect(() => {
     Audio.requestPermissionsAsync().then(({ granted }) => {
@@ -115,6 +137,9 @@ export default function RecorderScreen() {
     }
     setRecordingUri(null)
     setFinalDuration(0)
+    setPendingUpload(null)
+    setRecordingName('')
+    setNameModalVisible(false)
     // Build a timestamp-based filename — change this to any string you like
     const filename = `rec_${Date.now()}`
     await startRecording({ ...RECORDING_CONFIG, filename })
@@ -132,7 +157,44 @@ export default function RecorderScreen() {
     const result = await stopRecording()
     if (result?.durationMs) setFinalDuration(result.durationMs)
     if (result?.fileUri) setRecordingUri(result.fileUri)
-  }, [stopRecording])
+
+    if (result?.fileUri && route.params?.nextScreen === 'separation') {
+      const defaultName = result.filename || `rec_${Date.now()}.wav`
+      setPendingUpload({
+        uri: result.fileUri,
+        mimeType: result.mimeType,
+        defaultName,
+      })
+      setRecordingName(defaultName)
+      setNameModalVisible(true)
+    }
+  }, [route.params?.nextScreen, stopRecording])
+
+  const handleConfirmUpload = useCallback(async () => {
+    if (!pendingUpload) {
+      return
+    }
+
+    const uploadResult = await submitSeparationRequest(
+      {
+        uri: pendingUpload.uri,
+        name: recordingName.trim() || pendingUpload.defaultName,
+        mimeType: pendingUpload.mimeType,
+      },
+      route.params?.separationType ?? SeparationOption.FOUR_STEMS
+    )
+
+    if (uploadResult) {
+      setWatchJobId(uploadResult.jobId)
+      setNameModalVisible(false)
+      setPendingUpload(null)
+      navigation.navigate('Initial')
+    }
+  }, [navigation, pendingUpload, recordingName, route.params?.separationType, setWatchJobId])
+
+  const handleCancelUpload = useCallback(() => {
+    setNameModalVisible(false)
+  }, [])
 
   return (
     <SafeAreaView style={styles.container}>
@@ -181,6 +243,38 @@ export default function RecorderScreen() {
           </Text>
         ) : null}
       </ScrollView>
+
+      <Modal
+        visible={nameModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCancelUpload}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Name the recording</Text>
+            <Text style={styles.modalDescription}>
+              Default name is prefilled. You can keep it or type your own before sending to source separation.
+            </Text>
+            <TextInput
+              value={recordingName}
+              onChangeText={setRecordingName}
+              placeholder="rec_123456"
+              autoCapitalize="none"
+              autoCorrect={false}
+              style={styles.modalInput}
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={[styles.modalButton, styles.modalCancelButton]} onPress={handleCancelUpload}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalButton, styles.modalSaveButton]} onPress={handleConfirmUpload}>
+                <Text style={styles.modalSaveText}>Upload</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   )
 }
@@ -284,5 +378,68 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     marginTop: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: '#1e1e1e',
+    borderRadius: 18,
+    padding: 20,
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  modalDescription: {
+    color: '#bdbdbd',
+    fontSize: 14,
+    marginBottom: 14,
+    lineHeight: 20,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: '#3c3c3c',
+    backgroundColor: '#121212',
+    color: '#fff',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 18,
+  },
+  modalButton: {
+    minWidth: 96,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  modalCancelButton: {
+    backgroundColor: '#2f2f2f',
+  },
+  modalSaveButton: {
+    backgroundColor: '#1db954',
+  },
+  modalCancelText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  modalSaveText: {
+    color: '#08130c',
+    fontWeight: '700',
   },
 })

@@ -7,6 +7,10 @@ import { Platform } from 'react-native';
 import JSZip from 'jszip';
 import { showToast } from '../shared/toastHelper';
 import { getSeparationById, getSeparationFolderPath } from './separationStorage';
+import { getClientId } from './clientStorage';
+import { SeparationOption } from '../models/separations-jobs/SeparationOption';
+import { requestSeparation } from '../services/separationService';
+import type { SeparationStatusResponse } from '../models/separations-jobs/SeparationStatusResponse';
 
 //potencijalno napraviti da moze odabrati vise fajlova za editor
 // ne moze sa expo-document-picker, on omogucava odabit vise fajlova samo za Web, ali ne i
@@ -34,6 +38,77 @@ export async function pickMultipleAudioFiles(): Promise<DocumentPicker.DocumentP
     console.log('test2');
     console.log(picks.assets.length);
     return picks.assets;
+}
+
+type SeparationUploadFile = {
+    uri: string;
+    name: string;
+    mimeType?: string | null;
+};
+
+function inferMimeType(fileName: string, fallback?: string | null) {
+    if (fallback) {
+        return fallback;
+    }
+
+    const extension = fileName.split('.').pop()?.toLowerCase();
+
+    switch (extension) {
+        case 'wav':
+            return 'audio/wav';
+        case 'm4a':
+        case 'mp4':
+            return 'audio/mp4';
+        case 'aac':
+            return 'audio/aac';
+        case 'ogg':
+            return 'audio/ogg';
+        case 'opus':
+            return 'audio/opus';
+        case 'mp3':
+        default:
+            return 'audio/mpeg';
+    }
+}
+
+async function makeSeparationFormData(
+    clientId: number,
+    option: SeparationOption,
+    file: SeparationUploadFile
+): Promise<FormData> {
+    const formData = new FormData();
+
+    formData.append('clientId', clientId.toString());
+    formData.append('file', {
+        uri: file.uri,
+        type: inferMimeType(file.name, file.mimeType),
+        name: file.name,
+    } as any);
+    formData.append('option', option);
+
+    return formData;
+}
+
+export async function submitSeparationRequest(
+    file: SeparationUploadFile,
+    option: SeparationOption
+): Promise<SeparationStatusResponse | null> {
+    try {
+        const client = await getClientId();
+        if (!client) {
+            showToast('error', 'Missing client', 'You need to sign in before uploading audio.');
+            return null;
+        }
+
+        const formData = await makeSeparationFormData(client, option, file);
+        const response = await requestSeparation(formData);
+        showToast('success', 'Separation started', 'Your audio file is being processed.');
+        return response;
+    } catch (error) {
+        console.error('Upload error:', error);
+        showToast('error', 'Upload failed', 'Could not start source separation.');
+        return null;
+    }
 }
 function sanitizeFileName(fileName: string) {
     return fileName.replace(/[\\/:*?"<>|]+/g, '_').trim() || 'export';

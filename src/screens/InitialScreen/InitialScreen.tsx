@@ -12,10 +12,8 @@ import Card from './Card';
 
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
-import { pickAudioFile } from '../../utils/pickDocument';
+import { pickAudioFile, submitSeparationRequest } from '../../utils/pickDocument';
 import { SeparationOption } from '../../models/separations-jobs/SeparationOption';
-import { requestSeparation } from '../../services/separationService';
-import { getClientId } from '../../utils/clientStorage';
 import { DocumentPickerAsset } from 'expo-document-picker';
 import { useSeparationWatcherController } from '../../utils/SeparationWatcherProvider';
 import RecentSeparationSection from './RecentSeparationSection';
@@ -79,42 +77,22 @@ export default function InitialScreen() {
           from: file.uri,
           to: dest
         });
-        try {
-          const client = await getClientId();
-          if(!client)
-            return;
-          const usedOption = optionParam ?? SeparationOption.FOUR_STEMS;
-          const formData = await makeFormData(client, usedOption, {
-            ...file,
-            uri: dest,
-            name: safeName,
-          });
-          console.log("Sending separation request:", { name: safeName, uri: dest, size: file.size, type: file.mimeType });
-          const response = await requestSeparation(formData);
+        const usedOption = optionParam ?? SeparationOption.FOUR_STEMS;
+        console.log("Sending separation request:", { name: safeName, uri: dest, size: file.size, type: file.mimeType });
+        const response = await submitSeparationRequest({
+          uri: dest,
+          name: safeName,
+          mimeType: file.mimeType,
+        }, usedOption);
+        if (response) {
           setWatchJobId(response.jobId);
           console.log("Upload response: ", response);
-        } catch(err) {
-          console.error("Upload error: ", err);
         }
       }
       } catch(err) {
         console.error("Greška u pickAudioFile:", err); 
       }
     }
-
-    const makeFormData = async (
-        clientId: number, option: SeparationOption, file: DocumentPickerAsset
-      ): Promise<FormData> => {
-        const formData = new FormData();
-        formData.append("clientId", clientId.toString());
-        formData.append("file", {
-          uri: file.uri,
-          type: file.mimeType || "audio/mpeg",
-          name: file.name || "song.mp3",
-        } as any);
-        formData.append("option", option);
-        return formData;
-      }
 
   return (
     <View style={styles.container}>
