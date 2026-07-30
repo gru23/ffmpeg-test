@@ -15,6 +15,7 @@ import { Asset } from 'expo-asset';
 import FiltersScreen from './src/screens/FiltersScreen';
 import VisualScreen from './src/screens/VisualScreen';
 import SkiaVisualScreen from './src/screens/SkiaVisualScreen';
+import EditorScreen from './src/screens/EditorScreen/EditorScreen';
 import SourceSeparationPlayerScreen from './src/screens/SourceSeparationScreen/SourceSeparationPlayerScreen';
 import PickerScreen from './src/screens/PickerScreen';
 import RecorderScreen from './src/screens/RecorderScreen';
@@ -38,6 +39,7 @@ export type RootStackParamList = {
   Filters: undefined;
   Visual: undefined;
   SkiaVisual: { path: string };
+  EditorScreen: { path: string };
   SourceSeparation: { id: string };
   Picker: undefined;
   Recorder: { nextScreen: string, separationType: SeparationOption };
@@ -297,6 +299,7 @@ export default function App() {
               <Stack.Screen name='Filters' component={FiltersScreen} />
               <Stack.Screen name='Visual' component={VisualScreen} />
               <Stack.Screen name='SkiaVisual' component={SkiaVisualScreen} initialParams={{ path: 'test2' }} />
+              <Stack.Screen name='EditorScreen' component={EditorScreen} />
               <Stack.Screen name='SourceSeparation' component={SourceSeparationPlayerScreen} options={{ headerShown: false }} />
               <Stack.Screen name='Picker' component={PickerScreen} />
               <Stack.Screen name='Recorder' component={RecorderScreen} />

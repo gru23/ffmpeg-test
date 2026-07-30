@@ -11,12 +11,13 @@ type TrackProps = {
   volume: number;
   audioPath: string;
   onVolumeChange: (index: number, volume: number) => void;
+  onWaveformLoadStateChange?: (index: number, isLoading: boolean) => void;
   icon: any;
   muteIcon: any;
   currentPosition: number;
 };
 
-export default function Track({ name, sound, index, volume, audioPath, onVolumeChange, icon, muteIcon, currentPosition }: TrackProps) {
+export default function Track({ name, sound, index, volume, audioPath, onVolumeChange, onWaveformLoadStateChange, icon, muteIcon, currentPosition }: TrackProps) {
   const [volumeValue, setVolumeValue] = useState<number>(volume);
   const [muteButton, setMuteButton] = useState<string>("Mute");
   const [sliderValue, setSliderValue] = useState<number>(volume * 100);
@@ -119,6 +120,13 @@ export default function Track({ name, sound, index, volume, audioPath, onVolumeC
           waveColor="#fff"
           scrubColor="#fff"
           containerStyle={styles.waveformContainer}
+          onChangeWaveformLoadState={(state) => {
+            onWaveformLoadStateChange?.(index, state);
+          }}
+          onError={(error) => {
+            console.error(`Waveform error for track ${index}:`, error);
+            onWaveformLoadStateChange?.(index, false);
+          }}
         />
         {duration > 0 && (
           <Animated.View

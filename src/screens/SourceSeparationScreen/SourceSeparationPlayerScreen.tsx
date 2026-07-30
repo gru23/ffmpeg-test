@@ -34,7 +34,9 @@ export default function SourceSeparationPlayerScreen() {
   const [duration, setDuration] = useState<number>(0);
   const [names, setNames] = useState<string[]>(['Vocals', 'Drums', 'Other', 'Bass']);
   const [stemFiles, setStemFiles] = useState<string[]>(['vocals.wav', 'drums.wav', 'other.wav', 'bass.wav']);
+  const [waveformLoadingStates, setWaveformLoadingStates] = useState<boolean[]>([]);
   const stemsRef = useRef<Sound[]>([]);
+  const playbackResettingRef = useRef(false);
   // const names = ['Vocals', 'Drums', 'Other', 'Bass'];
   // const stemFiles = ['vocals.wav', 'drums.wav', 'other.wav', 'bass.wav'];
 
@@ -119,6 +121,7 @@ export default function SourceSeparationPlayerScreen() {
       console.log("3");
       setNames(currentNames);
       setStemFiles(currentStemFiles);
+      setWaveformLoadingStates(new Array(currentStemFiles.length).fill(true));
       const path = await getSeparationFolderPath(separationId);
       console.log("PATH: " + path);
       const files = await Promise.all(
@@ -137,6 +140,7 @@ export default function SourceSeparationPlayerScreen() {
       for (const fileUri of files) {
         const sound = new Audio.Sound();
         await sound.loadAsync({ uri: fileUri }, { shouldPlay: false });
+        sound.setOnPlaybackStatusUpdate(handlePlaybackStatusUpdate);
         loaded.push(sound);
       }
       setStems(loaded);
@@ -195,6 +199,46 @@ export default function SourceSeparationPlayerScreen() {
     await stems[index].setVolumeAsync(volume);
   };
 
+  const handlePlaybackStatusUpdate = useCallback((status: any) => {
+    if (!status?.isLoaded) {
+      return;
+    }
+
+    if (status.isPlaying) {
+      setCurrentPosition(status.positionMillis ?? 0);
+    }
+
+    if (status.didJustFinish && !playbackResettingRef.current) {
+      playbackResettingRef.current = true;
+      void (async () => {
+        try {
+          await Promise.all(
+            stemsRef.current.map(async (stem) => {
+              try {
+                await stem.pauseAsync();
+                await stem.setPositionAsync(0);
+              } catch (error) {
+                console.log('Error resetting stem after finish:', error);
+              }
+            })
+          );
+          setCurrentPosition(0);
+          setIsPlaying(false);
+        } finally {
+          playbackResettingRef.current = false;
+        }
+      })();
+    }
+  }, []);
+
+  const handleWaveformLoadStateChange = (index: number, isLoading: boolean) => {
+    setWaveformLoadingStates((prev) => {
+      const next = [...prev];
+      next[index] = isLoading;
+      return next;
+    });
+  };
+
   const formatTime = (miliseconds: number) => {
     const totalSeconds = Math.floor(miliseconds / 1000);
     const minutes = Math.floor(totalSeconds / 60);
@@ -212,6 +256,8 @@ export default function SourceSeparationPlayerScreen() {
       setIsPlaying(true);
     }
   };
+
+  const isAnyWaveformLoading = waveformLoadingStates.length === 0 || waveformLoadingStates.some(Boolean);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -233,7 +279,7 @@ export default function SourceSeparationPlayerScreen() {
           </MenuOptions>
         </Menu>
     </View>
-      <ScrollView style={styles.scrollArea}>
+      <ScrollView style={styles.scrollArea} scrollEnabled={!stemsLoading && !isAnyWaveformLoading}>
         {stems.map((stem, i) => (
             <Track
             key={i}
@@ -245,6 +291,7 @@ export default function SourceSeparationPlayerScreen() {
             // audioPath={(FileSystem.documentDirectory + stemFiles[i]).replace('file://', '')}
             audioPath={stemPaths[i] ?? ''}
             onVolumeChange={setVolume}
+            onWaveformLoadStateChange={handleWaveformLoadStateChange}
             icon={ICONS[ICON_KEYS[names[i]]].normal}
             muteIcon={ICONS[ICON_KEYS[names[i]]].mute}
             currentPosition={currentPosition}
@@ -286,10 +333,10 @@ export default function SourceSeparationPlayerScreen() {
         </TouchableOpacity>
       </View>
       
-      {stemsLoading && (
+      {(stemsLoading || isAnyWaveformLoading) && (
         <View style={styles.overlay}>
           <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>{loadingText}</Text>
+          <Text style={styles.loadingText}>{isAnyWaveformLoading ? 'Stems loading...' : loadingText}</Text>
         </View>
       )}
     </SafeAreaView>

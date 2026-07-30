@@ -1,4 +1,4 @@
-import { Modal, StyleSheet, View, TouchableOpacity, Text } from 'react-native';
+import { Modal, StyleSheet, View, TouchableOpacity, Text, StatusBar as RNStatusBar } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -20,6 +20,10 @@ import RecentSeparationSection from './RecentSeparationSection';
 import { getAllSeparations } from '../../services/clientService';
 import { SeparationJob } from '../../models/separations-jobs/SeparationJob';
 import { fetchSeparationMetaData, getSeparations } from '../../utils/separationStorage';
+import { clearClient, getClient } from '../../utils/clientStorage';
+import { clearTokens, getRefreshToken } from '../../utils/authStorage';
+import { LogoutRequest } from '../../models/auth/LogoutRequest';
+import { logout } from '../../services/authService';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Initial'>;
 
@@ -30,6 +34,7 @@ export default function InitialScreen() {
   const [jobs, setJobs] = useState<SeparationJob[]>([]);
 
   const [modalOptionVisible, setModalOptionVisible] = useState(false);
+  const [drawerVisible, setDrawerVisible] = useState(false);
   const [separationOption, setSeparationOption] = useState<SeparationOption | null>(null);
   const [separationAction, setSeparationAction] = useState<'browse' | 'record' | null>(null);
 
@@ -75,6 +80,32 @@ export default function InitialScreen() {
     setModalOptionVisible(true);
   }
 
+  const handleLogout = async () => {
+    try {
+      const token = await getRefreshToken();
+      const client = await getClient();
+
+      if (token && client) {
+        const request: LogoutRequest = {
+          clientId: client.id,
+          refreshToken: token,
+        };
+        await logout(request);
+      }
+
+      await clearTokens();
+      await clearClient();
+      setDrawerVisible(false);
+      navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+    } catch (error) {
+      console.error('Logout failed:', error);
+      await clearTokens();
+      await clearClient();
+      setDrawerVisible(false);
+      navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+    }
+  };
+
   const handleUpload = async (optionParam?: SeparationOption) => {
       try {
       setWatchJobId(null);
@@ -106,8 +137,7 @@ export default function InitialScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.menuContainer}>
-        <TouchableOpacity>
-          {/* <MaterialIcons name='menu' size={28} color="black" /> */}
+        <TouchableOpacity onPress={() => setDrawerVisible(true)}>
           <SimpleLineIcons name="menu" size={24} color="#1561bd" />
         </TouchableOpacity>
       </View>
@@ -121,8 +151,16 @@ export default function InitialScreen() {
         onBrowseFile={async () => {
           const file = await pickAudioFile();
           if(file) {
+            const safeName = file.name || `editor-${Date.now()}.wav`;
+            const dest = FileSystem.documentDirectory + safeName;
+
+            await FileSystem.copyAsync({
+              from: file.uri,
+              to: dest,
+            });
+
             console.log(`Izabrani audio fajl: ${file}`);
-            navigation.navigate('Filters');
+            navigation.navigate('EditorScreen', { path: dest });
           }
         }}
         onRecord={async () => {
@@ -156,6 +194,13 @@ export default function InitialScreen() {
       >
         <View style={styles.overlay}>
           <View style={styles.modalContent}>
+            <TouchableOpacity
+              onPress={() => setModalOptionVisible(false)}
+              style={styles.closeButton}
+              hitSlop={10}
+            >
+              <MaterialIcons name="close" size={24} color="#333" />
+            </TouchableOpacity>
             <Text style={styles.title}>Separation type</Text>
             <TouchableOpacity onPress={() => handleOptionSelection(SeparationOption.VOCALS)}>
               <Text style={styles.option}>VOCALS</Text>
@@ -163,8 +208,48 @@ export default function InitialScreen() {
             <TouchableOpacity onPress={() => handleOptionSelection(SeparationOption.FOUR_STEMS)}>
               <Text style={styles.option}>FOUR STEMS</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setModalOptionVisible(false)}>
-              <Text style={styles.option}>Zatvori</Text>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={drawerVisible}
+        transparent={true}
+        animationType='fade'
+        onRequestClose={() => setDrawerVisible(false)}
+      >
+        <View style={styles.drawerOverlay}>
+          <TouchableOpacity
+            style={styles.drawerBackdrop}
+            activeOpacity={1}
+            onPress={() => setDrawerVisible(false)}
+          />
+          <View style={styles.drawerPanel}>
+            <View style={styles.drawerHeader}>
+              <Text style={styles.drawerTitle}>Test Drawer</Text>
+              <TouchableOpacity onPress={() => setDrawerVisible(false)} hitSlop={10}>
+                <MaterialIcons name="close" size={24} color="#1f2937" />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity style={styles.drawerItem} onPress={() => navigation.navigate('Settings')}>
+              <MaterialIcons name="settings" size={22} color="#4f90ff" />
+              <Text style={styles.drawerItemText}>Settings</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.drawerItem} onPress={() => navigation.navigate('Account')}>
+              <MaterialIcons name="person" size={22} color="#FF903C" />
+              <Text style={styles.drawerItemText}>Account</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.drawerItem} onPress={() => setExpandedCard(null)}>
+              <MaterialIcons name="restart-alt" size={22} color="#10b981" />
+              <Text style={styles.drawerItemText}>Reset cards</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.drawerItem} onPress={handleLogout}>
+              <MaterialIcons name="logout" size={22} color="#ef4444" />
+              <Text style={styles.drawerItemText}>Log out</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -182,12 +267,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   menuContainer: {
-    // flexDirection: 'row',
-    // justifyContent: 'flex-end',
-    // alignItems: 'center',
     position: 'absolute',
     right: 20,
     top: 20,
+    zIndex: 2,
   },
   optionTitleIcon: {
     fontSize: 34,
@@ -206,7 +289,64 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 8,
     width: "80%",
+    position: 'relative',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 1,
   },
   title: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
   option: { fontSize: 16, marginVertical: 8 },
+  drawerOverlay: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    paddingTop: RNStatusBar.currentHeight ?? 0,
+  },
+  drawerBackdrop: {
+    flex: 1,
+  },
+  drawerPanel: {
+    width: '78%',
+    maxWidth: 340,
+    backgroundColor: 'rgba(255,255,255,0.88)',
+    paddingTop: 18,
+    paddingHorizontal: 18,
+    paddingBottom: 24,
+    borderTopLeftRadius: 24,
+    borderBottomLeftRadius: 24,
+    elevation: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    shadowOffset: { width: -4, height: 0 },
+  },
+  drawerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 18,
+  },
+  drawerTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  drawerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    backgroundColor: '#f3f4f6',
+    marginBottom: 12,
+  },
+  drawerItemText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
 });
