@@ -243,32 +243,39 @@ export default function EditorScreen() {
 
       await FileSystem.deleteAsync(pcmPath, { idempotent: true });
 
-      const infoCommand = `-i "${ffmpegInputPath}" -select_streams a:0 -show_entries stream=channels,sample_rate,duration,codec_name,bits_per_sample -of default=noprint_wrappers=1`;
+      // Info o originalnom fajlu - samo channels i duration su nam potrebni,
+      // format uvek forsiramo na fiksni raw PCM ispod
+      const infoCommand = `-i "${ffmpegInputPath}" -select_streams a:0 -show_entries stream=channels,sample_rate,duration -of default=noprint_wrappers=1`;
       const session = await FFprobeKit.execute(infoCommand);
       const infoOutput = await session.getOutput();
 
       const channelsMatch = infoOutput.match(/channels=(\d+)/);
       const durationMatch = infoOutput.match(/duration=([\d.]+)/);
-      const codecNameMatch = infoOutput.match(/codec_name=(\S+)/);
-      const bitsPerSampleMatch = infoOutput.match(/bits_per_sample=(\d+)/);
 
       const channels = channelsMatch ? parseInt(channelsMatch[1], 10) : 1;
       const duration = durationMatch ? parseFloat(durationMatch[1]) : 0;
-      const codecName = codecNameMatch ? codecNameMatch[1] : 'pcm_s16le';
-      const codecShort = codecName.replace('pcm_', '');
-      const bitsPerSample = bitsPerSampleMatch ? parseInt(bitsPerSampleMatch[1], 10) : 16;
+
+      const bitsPerSample = 16;
       const dynamicCanvasWidth = Math.max(Math.max(320, screenWidth - 40), Math.min(4000, Math.ceil(duration * 70) + axisGutter + 2));
       const dynamicPlotWidth = Math.max(1, dynamicCanvasWidth - axisGutter - 2);
 
-      const pcmCommand = `-y -i "${ffmpegInputPath}" -f ${codecShort} -acodec ${codecName} "${ffmpegPcmPath}"`;
+      // Uvek dekodiraj u fiksni raw PCM format (s16le), bez obzira na originalni kodek.
+      // Sniženi sample rate jer nam za waveform overview ne treba puna rezolucija -
+      // sprečava OutOfMemoryError kod dužih pesama.
+      const WAVEFORM_SAMPLE_RATE = 8000;
+      const pcmCommand = `-y -i "${ffmpegInputPath}" -vn -f s16le -acodec pcm_s16le -ar ${WAVEFORM_SAMPLE_RATE} "${ffmpegPcmPath}"`;
       await FFmpegKit.execute(pcmCommand);
 
       const pcmData = await FileSystem.readAsStringAsync(pcmPath, {
         encoding: FileSystem.EncodingType.Base64,
       });
 
-      const buffer = Buffer.from(pcmData, 'base64');
-      const samples = createNormalizedSamples(buffer, codecName, bitsPerSample);
+      let buffer: Buffer | null = Buffer.from(pcmData, 'base64');
+      const samples = createNormalizedSamples(buffer, 'pcm_s16le', bitsPerSample);
+
+      // Oslobodi base64 string i buffer čim su nam semplovi izvučeni -
+      // ovo su najveći potrošači memorije u celoj funkciji
+      buffer = null;
 
       setDurationInSeconds(duration);
 
