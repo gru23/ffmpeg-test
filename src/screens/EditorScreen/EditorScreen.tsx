@@ -1,7 +1,8 @@
 import { Canvas, Group, Path, Skia, Text as SkiaText, useFont } from '@shopify/react-native-skia';
 import { ActivityIndicator, Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { RouteProp, useRoute } from '@react-navigation/native';
+import * as ScreenOrientation from 'expo-screen-orientation';
+import { RouteProp, useFocusEffect, useRoute } from '@react-navigation/native';
 import * as FileSystem from 'expo-file-system/legacy';
 import { FFmpegKit, FFprobeKit } from 'ffmpeg-kit-react-native';
 import { Buffer } from 'buffer';
@@ -29,6 +30,16 @@ export default function EditorScreen() {
   const bottomChannelOffset = height + channelGap;
   const waveformBottom = bottomChannelOffset + height;
   const plotClipRect = Skia.XYWHRect(axisGutter, 0, plotWidth, waveformBottom);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+
+      return () => {
+        ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+      };
+    }, [])
+  );
 
   const font = useFont(require('../../../assets/Roboto-Regular.ttf'), 12);
   function smoothSeries(values: number[]) {
@@ -338,8 +349,8 @@ export default function EditorScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Editor</Text>
-      <Text style={styles.subtitle}>Signal izabranog pjesme</Text>
+      {/* <Text style={styles.title}>Editor</Text> */}
+      {/* <Text style={styles.subtitle}>Signal izabranog pjesme</Text> */}
 
       <View style={styles.waveformStage}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false}>

@@ -299,7 +299,7 @@ export default function App() {
               <Stack.Screen name='Filters' component={FiltersScreen} />
               <Stack.Screen name='Visual' component={VisualScreen} />
               <Stack.Screen name='SkiaVisual' component={SkiaVisualScreen} initialParams={{ path: 'test2' }} />
-              <Stack.Screen name='EditorScreen' component={EditorScreen} />
+              <Stack.Screen name='EditorScreen' component={EditorScreen} options={{ headerShown: false }} />
               <Stack.Screen name='SourceSeparation' component={SourceSeparationPlayerScreen} options={{ headerShown: false }} />
               <Stack.Screen name='Picker' component={PickerScreen} />
               <Stack.Screen name='Recorder' component={RecorderScreen} />
