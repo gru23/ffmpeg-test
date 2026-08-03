@@ -348,7 +348,7 @@ export default function EditorScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
       {/* <Text style={styles.title}>Editor</Text> */}
       {/* <Text style={styles.subtitle}>Signal izabranog pjesme</Text> */}
 
@@ -483,7 +483,7 @@ export default function EditorScreen() {
 
       <Text style={styles.meta}>Trajanje: {durationInSeconds.toFixed(2)} s</Text>
       <Text style={styles.meta} numberOfLines={2}>Putanja: {path ?? '-'}</Text>
-    </View>
+    </ScrollView>
   );
 }
 
