@@ -15,7 +15,7 @@ import { Asset } from 'expo-asset';
 import FiltersScreen from './src/screens/FiltersScreen';
 import VisualScreen from './src/screens/VisualScreen';
 import SkiaVisualScreen from './src/screens/SkiaVisualScreen';
-import EditorScreen from './src/screens/EditorScreen/EditorScreen';
+import EditorScreen from './src/screens/Editor/EditorScreen';
 import SourceSeparationPlayerScreen from './src/screens/SourceSeparationScreen/SourceSeparationPlayerScreen';
 import PickerScreen from './src/screens/PickerScreen';
 import RecorderScreen from './src/screens/RecorderScreen';

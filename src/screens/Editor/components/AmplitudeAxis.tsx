@@ -1,6 +1,6 @@
 import React from 'react';
 import { Path, Text as SkiaText, Skia, SkFont } from '@shopify/react-native-skia';
-import { AXIS_GUTTER, TIME_AXIS_AREA, TrackLayout } from '../types';
+import { AXIS_GUTTER, TrackLayout } from '../types';
 
 type Props = {
   trackLayouts: TrackLayout[];
@@ -18,7 +18,7 @@ export default function AmplitudeAxis({ trackLayouts, channelHeight, font }: Pro
     <>
       {trackLayouts.map((tl) =>
         tl.channels.map((row) => {
-          const yOffset = TIME_AXIS_AREA + row.yTop;
+          const yOffset = row.yTop;
           const axisPath = Skia.Path.Make();
           axisPath.moveTo(AXIS_GUTTER, yOffset);
           axisPath.lineTo(AXIS_GUTTER, yOffset + channelHeight);

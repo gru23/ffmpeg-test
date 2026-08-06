@@ -2,6 +2,7 @@ export type TrackData = {
   id: string;
   title: string;
   duration: number;
+  path: string;
   leftChannel: number[];
   rightChannel: number[] | null;
   fillColorL: string;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Group, Path, Skia } from '@shopify/react-native-skia';
-import { TIME_AXIS_AREA, TrackLayout } from '../types';
+import { TrackLayout } from '../types';
 import { createCenterLinePath } from '../audioMath';
 
 type Props = {
@@ -16,7 +16,7 @@ export default function Track({ layout, plotWidth, channelHeight, isLast }: Prop
   return (
     <>
       {layout.channels.map((row) => {
-        const yOffset = TIME_AXIS_AREA + row.yTop;
+        const yOffset = row.yTop;
         return (
           <React.Fragment key={row.key}>
             <Path
@@ -39,7 +39,7 @@ export default function Track({ layout, plotWidth, channelHeight, isLast }: Prop
         <Path
           path={(() => {
             const p = Skia.Path.Make();
-            const y = TIME_AXIS_AREA + layout.separatorY!;
+            const y = layout.separatorY!;
             p.moveTo(0, y);
             p.lineTo(plotWidth, y);
             return p;

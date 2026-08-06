@@ -77,7 +77,7 @@ export function useEditorLayout(tracks: TrackData[], screenWidth: number, screen
   });
 
   const waveformContentHeight = cursor;
-  const canvasHeight = TIME_AXIS_AREA + waveformContentHeight;
+  const canvasHeight = waveformContentHeight;
   const plotClipRect = Skia.XYWHRect(0, 0, plotWidth, canvasHeight);
 
   return { maxDuration, canvasWidth, plotWidth, channelHeight, trackLayouts, canvasHeight, plotClipRect };

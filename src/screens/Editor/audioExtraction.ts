@@ -8,6 +8,7 @@ export type ExtractedTrack = {
   id: string;
   title: string;
   duration: number;
+  path: string;
   leftChannel: number[];
   rightChannel: number[] | null;
 };
@@ -57,6 +58,7 @@ export async function extractTrackData(filePath: string, displayName?: string): 
     id: `track-${Date.now()}`,
     title,
     duration,
+    path: filePath,
     leftChannel,
     rightChannel: rightChannel.length > 0 ? rightChannel : null,
   };
