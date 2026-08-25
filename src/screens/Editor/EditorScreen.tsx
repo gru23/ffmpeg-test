@@ -50,7 +50,8 @@ export default function EditorScreen() {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectionStartTime, setSelectionStartTime] = useState<number | null>(null);
   const [selectionEndTime, setSelectionEndTime] = useState<number | null>(null);
-  const [mutedTracks, setMutedTracks] = useState<Record<string, boolean>>({});
+  const [trackVolumes, setTrackVolumes] = useState<Record<string, number>>({});
+  const [lastNonZeroVolumes, setLastNonZeroVolumes] = useState<Record<string, number>>({});
 
 
   const waveformTouchRef = useRef<{ x: number; y: number; time: number; moved: boolean } | null>(null);
@@ -74,7 +75,7 @@ export default function EditorScreen() {
     useEditorLayout(tracks, screenWidth, screenHeight, zoomFactor);
   const minVisualZoom = maxDuration > 0 ? Math.max(MIN_ZOOM, (baseCanvasWidth - AXIS_GUTTER - 2) / (maxDuration * 70)) : MIN_ZOOM;
 
-  const { togglePlayback, isPlaying, toggleAll, stopAll, seekAll, isPlayingAll, positionSeconds, setTrackMuted } = usePlayback();
+  const { togglePlayback, isPlaying, toggleAll, stopAll, seekAll, isPlayingAll, positionSeconds, setTrackVolume } = usePlayback();
 
   const handleTogglePlay = (id: string) => {
     const track = tracks.find((t) => t.id === id);
@@ -92,22 +93,46 @@ export default function EditorScreen() {
     void stopAll();
   };
 
-  const isMuted = (id: string) => {
-    return mutedTracks[id] ?? false;
+  const getTrackVolume = (id: string) => {
+    return trackVolumes[id] ?? 1;
   };
 
-  const handleToggleMute = (id: string) => {
+  const isMuted = (id: string) => {
+    return getTrackVolume(id) <= 0;
+  };
+
+  const handleVolumeChange = (id: string, volume: number) => {
     const track = tracks.find((t) => t.id === id);
     if (!track) return;
 
-    const nextMuted = !(mutedTracks[id] ?? false);
-
-    setMutedTracks((current) => ({
+    const nextVolume = Math.max(0, Math.min(1, volume));
+    setTrackVolumes((current) => ({
       ...current,
-      [id]: nextMuted,
+      [id]: nextVolume,
     }));
 
-    void setTrackMuted(id, track.path, nextMuted);
+    if (nextVolume > 0) {
+      setLastNonZeroVolumes((current) => ({
+        ...current,
+        [id]: nextVolume,
+      }));
+    }
+
+    void setTrackVolume(id, track.path, nextVolume);
+  };
+
+  const handleToggleMute = (id: string) => {
+    const currentVolume = getTrackVolume(id);
+    if (currentVolume <= 0) {
+      handleVolumeChange(id, lastNonZeroVolumes[id] ?? 1);
+      return;
+    }
+
+    setLastNonZeroVolumes((current) => ({
+      ...current,
+      [id]: currentVolume,
+    }));
+    handleVolumeChange(id, 0);
   };
 
 
@@ -495,6 +520,8 @@ export default function EditorScreen() {
               onTogglePlay={handleTogglePlay}
               isMuted={isMuted}
               onToggleMute={handleToggleMute}
+              trackVolume={getTrackVolume}
+              onVolumeChange={handleVolumeChange}
             />
           </View>
         </View>

@@ -8,7 +8,7 @@ export type PlayableTrack = { id: string; uri: string };
 // zatraži dati track, kreira Sound objekat; drugi ga samo ponovo koristi.
 export function usePlayback() {
   const soundsRef = useRef<Map<string, Audio.Sound>>(new Map());
-  const mutedIdsRef = useRef<Set<string>>(new Set());
+  const volumeByIdRef = useRef<Map<string, number>>(new Map());
   const [playingIds, setPlayingIds] = useState<Set<string>>(new Set());
 
   const [isPlayingAll, setIsPlayingAll] = useState(false);
@@ -65,8 +65,12 @@ export function usePlayback() {
     });
   }, []);
 
-  async function applyMuteState(sound: Audio.Sound, muted: boolean) {
-    await sound.setVolumeAsync(muted ? 0 : 1);
+  function clampVolume(volume: number) {
+    return Math.max(0, Math.min(1, volume));
+  }
+
+  async function applyTrackVolume(sound: Audio.Sound, volume: number) {
+    await sound.setVolumeAsync(clampVolume(volume));
   }
 
   async function getOrCreateSound(id: string, uri: string) {
@@ -82,7 +86,7 @@ export function usePlayback() {
         }
       );
       sound = newSound;
-      await applyMuteState(sound, mutedIdsRef.current.has(id));
+      await applyTrackVolume(sound, volumeByIdRef.current.get(id) ?? 1);
       soundsRef.current.set(id, sound);
     }
     return sound;
@@ -193,19 +197,20 @@ export function usePlayback() {
     [isPlayingAll, pauseAll, playAll]
   );
 
-  const setTrackMuted = useCallback(async (id: string, uri: string, muted: boolean) => {
-    if (muted) {
-      mutedIdsRef.current.add(id);
-    } else {
-      mutedIdsRef.current.delete(id);
-    }
+  const setTrackVolume = useCallback(async (id: string, uri: string, volume: number) => {
+    const nextVolume = clampVolume(volume);
+    volumeByIdRef.current.set(id, nextVolume);
 
     const sound = await getOrCreateSound(id, uri);
     const status = await sound.getStatusAsync();
     if (!status.isLoaded) return;
 
-    await applyMuteState(sound, muted);
+    await applyTrackVolume(sound, nextVolume);
   }, []);
 
-  return { togglePlayback, isPlaying, toggleAll, stopAll, seekAll, isPlayingAll, positionSeconds, setTrackMuted };
+  const setTrackMuted = useCallback(async (id: string, uri: string, muted: boolean) => {
+    await setTrackVolume(id, uri, muted ? 0 : 1);
+  }, [setTrackVolume]);
+
+  return { togglePlayback, isPlaying, toggleAll, stopAll, seekAll, isPlayingAll, positionSeconds, setTrackMuted, setTrackVolume };
 }
