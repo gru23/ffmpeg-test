@@ -50,6 +50,7 @@ export default function EditorScreen() {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectionStartTime, setSelectionStartTime] = useState<number | null>(null);
   const [selectionEndTime, setSelectionEndTime] = useState<number | null>(null);
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [trackVolumes, setTrackVolumes] = useState<Record<string, number>>({});
   const [lastNonZeroVolumes, setLastNonZeroVolumes] = useState<Record<string, number>>({});
 
@@ -58,6 +59,7 @@ export default function EditorScreen() {
   const selectionGestureRef = useRef<{
     mode: 'create' | 'start' | 'end' | null;
     anchorTime: number;
+    trackId: string | null;
   } | null>(null);
 
   useFocusEffect(
@@ -159,6 +161,27 @@ export default function EditorScreen() {
         }
       : null;
 
+  const selectedTrackLayout = selectedTrackId
+    ? trackLayouts.find((layout) => layout.id === selectedTrackId) ?? null
+    : null;
+
+  const getTrackSelectionBounds = (layout: (typeof trackLayouts)[number]) => {
+    const firstChannel = layout.channels[0];
+    const lastChannel = layout.channels[layout.channels.length - 1];
+    const top = firstChannel?.yTop ?? layout.titleY;
+    const bottom = lastChannel ? lastChannel.yTop + channelHeight : layout.titleY + channelHeight;
+    return { top, height: Math.max(1, bottom - top) };
+  };
+
+  const findTrackAtY = (viewportY: number) => {
+    return (
+      trackLayouts.find((layout) => {
+        const { top, height } = getTrackSelectionBounds(layout);
+        return viewportY >= top && viewportY <= top + height;
+      }) ?? null
+    );
+  };
+
   const handleSelectionToggle = () => {
     setIsSelectionMode((current) => !current);
   };
@@ -170,30 +193,36 @@ export default function EditorScreen() {
     setSelectionEndTime(nextEnd);
   };
 
-  const beginSelectionGesture = (viewportX: number) => {
+  const beginSelectionGesture = (viewportX: number, viewportY: number) => {
+    const touchedTrack = findTrackAtY(viewportY);
+    if (!touchedTrack) return;
+
     const touchTime = viewportXToTime(viewportX);
     const selection = normalizedSelection;
     const contentX = scrollXRef.current + viewportX;
+    const hasSelectionOnTouchedTrack = selection && selectedTrackId === touchedTrack.id;
 
-    if (selection) {
+    if (hasSelectionOnTouchedTrack) {
       const startX = timeToX(selection.start);
       const endX = timeToX(selection.end);
       const nearStart = Math.abs(contentX - startX) <= SELECTION_HANDLE_HIT_SLOP;
       const nearEnd = Math.abs(contentX - endX) <= SELECTION_HANDLE_HIT_SLOP;
 
       if (nearStart || nearEnd) {
-        selectionGestureRef.current = { mode: nearStart ? 'start' : 'end', anchorTime: touchTime };
+        selectionGestureRef.current = { mode: nearStart ? 'start' : 'end', anchorTime: touchTime, trackId: touchedTrack.id };
         return;
       }
     }
 
-    selectionGestureRef.current = { mode: 'create', anchorTime: touchTime };
+    setSelectedTrackId(touchedTrack.id);
+    selectionGestureRef.current = { mode: 'create', anchorTime: touchTime, trackId: touchedTrack.id };
     updateSelection(touchTime, touchTime);
   };
 
   const updateSelectionGesture = (viewportX: number) => {
     const gesture = selectionGestureRef.current;
     if (!gesture) return;
+    if (!gesture.trackId || selectedTrackId !== gesture.trackId) return;
 
     const currentTime = viewportXToTime(viewportX);
     const selection = normalizedSelection;
@@ -268,7 +297,7 @@ export default function EditorScreen() {
   };
 
   const handleSelectionLayerStart = (e: any) => {
-    beginSelectionGesture(e.nativeEvent.locationX);
+    beginSelectionGesture(e.nativeEvent.locationX, e.nativeEvent.locationY);
   };
 
   const handleSelectionLayerMove = (e: any) => {
@@ -336,6 +365,15 @@ export default function EditorScreen() {
       selectionGestureRef.current = null;
     }
   }, [isSelectionMode]);
+
+  useEffect(() => {
+    if (!selectedTrackId) return;
+    if (trackLayouts.some((layout) => layout.id === selectedTrackId)) return;
+
+    setSelectedTrackId(null);
+    setSelectionStartTime(null);
+    setSelectionEndTime(null);
+  }, [trackLayouts, selectedTrackId]);
 
   async function loadInitialTrack(filePath: string) {
     try {
@@ -456,7 +494,7 @@ export default function EditorScreen() {
                   />
                 </Canvas>
 
-                {normalizedSelection && maxDuration > 0 && (
+                {normalizedSelection && maxDuration > 0 && selectedTrackLayout && (
                   <View
                     pointerEvents="none"
                     style={[
@@ -464,13 +502,14 @@ export default function EditorScreen() {
                       {
                         left: timeToX(normalizedSelection.start),
                         width: Math.max(1, timeToX(normalizedSelection.end) - timeToX(normalizedSelection.start)),
-                        height: canvasHeight,
+                        top: getTrackSelectionBounds(selectedTrackLayout).top,
+                        height: getTrackSelectionBounds(selectedTrackLayout).height,
                       },
                     ]}
                   />
                 )}
 
-                {normalizedSelection && maxDuration > 0 && isSelectionMode && (
+                {normalizedSelection && maxDuration > 0 && isSelectionMode && selectedTrackLayout && (
                   <>
                     <View
                       pointerEvents="none"
@@ -478,7 +517,8 @@ export default function EditorScreen() {
                         styles.selectionHandle,
                         {
                           left: timeToX(normalizedSelection.start) - SELECTION_HANDLE_WIDTH / 2,
-                          height: canvasHeight,
+                          top: getTrackSelectionBounds(selectedTrackLayout).top,
+                          height: getTrackSelectionBounds(selectedTrackLayout).height,
                         },
                       ]}
                     >
@@ -490,7 +530,8 @@ export default function EditorScreen() {
                         styles.selectionHandle,
                         {
                           left: timeToX(normalizedSelection.end) - SELECTION_HANDLE_WIDTH / 2,
-                          height: canvasHeight,
+                          top: getTrackSelectionBounds(selectedTrackLayout).top,
+                          height: getTrackSelectionBounds(selectedTrackLayout).height,
                         },
                       ]}
                     >
