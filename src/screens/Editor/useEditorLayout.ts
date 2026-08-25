@@ -17,12 +17,17 @@ import { createWaveformEnvelopePath } from './audioMath';
 
 // Sav layout proračun (širine, visine, pozicije kanala/naslova/separatora) je
 // ovde - EditorScreen samo koristi rezultat, ne računa ništa sam.
-export function useEditorLayout(tracks: TrackData[], screenWidth: number, screenHeight: number) {
+export function useEditorLayout(
+  tracks: TrackData[],
+  screenWidth: number,
+  screenHeight: number,
+  zoomFactor: number
+) {
   const maxDuration = tracks.length ? Math.max(...tracks.map((t) => t.duration)) : 0;
 
   const canvasWidth = Math.max(
     Math.max(320, screenWidth - 40),
-    Math.min(4000, Math.ceil(maxDuration * 70) + AXIS_GUTTER + 2)
+    Math.min(4000, Math.ceil(maxDuration * 70 * zoomFactor) + AXIS_GUTTER + 2)
   );
   const plotWidth = Math.max(1, canvasWidth - AXIS_GUTTER - 2);
 

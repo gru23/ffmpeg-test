@@ -31,6 +31,12 @@ import Playhead from './components/Playhead';
 
 type EditorRouteProp = RouteProp<RootStackParamList, 'EditorScreen'>;
 
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 3;
+const ZOOM_STEP = 0.25;
+const SELECTION_HANDLE_WIDTH = 18;
+const SELECTION_HANDLE_HIT_SLOP = 22;
+
 export default function EditorScreen() {
   const route = useRoute<EditorRouteProp>();
   const initialPath = route.params?.path;
@@ -40,6 +46,18 @@ export default function EditorScreen() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAddingTrack, setIsAddingTrack] = useState<boolean>(false);
   const [errorText, setErrorText] = useState<string | null>(null);
+  const [zoomFactor, setZoomFactor] = useState(1);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectionStartTime, setSelectionStartTime] = useState<number | null>(null);
+  const [selectionEndTime, setSelectionEndTime] = useState<number | null>(null);
+  const [mutedTracks, setMutedTracks] = useState<Record<string, boolean>>({});
+
+
+  const waveformTouchRef = useRef<{ x: number; y: number; time: number; moved: boolean } | null>(null);
+  const selectionGestureRef = useRef<{
+    mode: 'create' | 'start' | 'end' | null;
+    anchorTime: number;
+  } | null>(null);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -51,10 +69,12 @@ export default function EditorScreen() {
   );
 
   const font = useFont(require('../../../assets/Roboto-Regular.ttf'), 12);
+  const baseCanvasWidth = Math.max(320, screenWidth - 40);
   const { maxDuration, canvasWidth, plotWidth, channelHeight, trackLayouts, canvasHeight, plotClipRect } =
-    useEditorLayout(tracks, screenWidth, screenHeight);
+    useEditorLayout(tracks, screenWidth, screenHeight, zoomFactor);
+  const minVisualZoom = maxDuration > 0 ? Math.max(MIN_ZOOM, (baseCanvasWidth - AXIS_GUTTER - 2) / (maxDuration * 70)) : MIN_ZOOM;
 
-  const { togglePlayback, isPlaying, toggleAll, isPlayingAll, positionSeconds } = usePlayback();
+  const { togglePlayback, isPlaying, toggleAll, stopAll, seekAll, isPlayingAll, positionSeconds, setTrackMuted } = usePlayback();
 
   const handleTogglePlay = (id: string) => {
     const track = tracks.find((t) => t.id === id);
@@ -66,6 +86,172 @@ export default function EditorScreen() {
   const handleToggleAll = () => {
     const playableTracks = tracks.map((t) => ({ id: t.id, uri: t.path }));
     void toggleAll(playableTracks, maxDuration);
+  };
+
+  const handleStopAll = () => {
+    void stopAll();
+  };
+
+  const isMuted = (id: string) => {
+    return mutedTracks[id] ?? false;
+  };
+
+  const handleToggleMute = (id: string) => {
+    const track = tracks.find((t) => t.id === id);
+    if (!track) return;
+
+    const nextMuted = !(mutedTracks[id] ?? false);
+
+    setMutedTracks((current) => ({
+      ...current,
+      [id]: nextMuted,
+    }));
+
+    void setTrackMuted(id, track.path, nextMuted);
+  };
+
+
+  const clampTime = (time: number) => {
+    if (maxDuration <= 0) return 0;
+    return Math.max(0, Math.min(maxDuration, time));
+  };
+
+  const timeToX = (time: number) => {
+    if (maxDuration <= 0) return 0;
+    return (clampTime(time) / maxDuration) * plotWidth;
+  };
+
+  const viewportXToTime = (viewportX: number) => {
+    if (maxDuration <= 0) return 0;
+    return clampTime(((scrollXRef.current + viewportX) / plotWidth) * maxDuration);
+  };
+
+  const normalizedSelection =
+    selectionStartTime !== null && selectionEndTime !== null
+      ? {
+          start: Math.min(selectionStartTime, selectionEndTime),
+          end: Math.max(selectionStartTime, selectionEndTime),
+        }
+      : null;
+
+  const handleSelectionToggle = () => {
+    setIsSelectionMode((current) => !current);
+  };
+
+  const updateSelection = (startTime: number, endTime: number) => {
+    const nextStart = clampTime(Math.min(startTime, endTime));
+    const nextEnd = clampTime(Math.max(startTime, endTime));
+    setSelectionStartTime(nextStart);
+    setSelectionEndTime(nextEnd);
+  };
+
+  const beginSelectionGesture = (viewportX: number) => {
+    const touchTime = viewportXToTime(viewportX);
+    const selection = normalizedSelection;
+    const contentX = scrollXRef.current + viewportX;
+
+    if (selection) {
+      const startX = timeToX(selection.start);
+      const endX = timeToX(selection.end);
+      const nearStart = Math.abs(contentX - startX) <= SELECTION_HANDLE_HIT_SLOP;
+      const nearEnd = Math.abs(contentX - endX) <= SELECTION_HANDLE_HIT_SLOP;
+
+      if (nearStart || nearEnd) {
+        selectionGestureRef.current = { mode: nearStart ? 'start' : 'end', anchorTime: touchTime };
+        return;
+      }
+    }
+
+    selectionGestureRef.current = { mode: 'create', anchorTime: touchTime };
+    updateSelection(touchTime, touchTime);
+  };
+
+  const updateSelectionGesture = (viewportX: number) => {
+    const gesture = selectionGestureRef.current;
+    if (!gesture) return;
+
+    const currentTime = viewportXToTime(viewportX);
+    const selection = normalizedSelection;
+
+    if (gesture.mode === 'create') {
+      updateSelection(gesture.anchorTime, currentTime);
+      return;
+    }
+
+    if (!selection) return;
+
+    if (gesture.mode === 'start') {
+      updateSelection(currentTime, selection.end);
+    } else if (gesture.mode === 'end') {
+      updateSelection(selection.start, currentTime);
+    }
+  };
+
+  const endSelectionGesture = () => {
+    selectionGestureRef.current = null;
+  };
+
+  const handleZoomIn = () => {
+    setZoomFactor((current) => Math.min(MAX_ZOOM, Number((current + ZOOM_STEP).toFixed(2))));
+  };
+
+  const handleZoomOut = () => {
+    setZoomFactor((current) => Math.max(minVisualZoom, Number((current - ZOOM_STEP).toFixed(2))));
+  };
+
+  const handleWaveformTouchStart = (e: any) => {
+    const { locationX, locationY } = e.nativeEvent;
+    waveformTouchRef.current = {
+      x: locationX,
+      y: locationY,
+      time: Date.now(),
+      moved: false,
+    };
+  };
+
+  const handleWaveformTouchMove = (e: any) => {
+    const touch = waveformTouchRef.current;
+    if (!touch) return;
+
+    const { locationX, locationY } = e.nativeEvent;
+    const dx = Math.abs(locationX - touch.x);
+    const dy = Math.abs(locationY - touch.y);
+    if (dx > 10 || dy > 10) {
+      touch.moved = true;
+    }
+  };
+
+  const handleWaveformTouchEnd = (e: any) => {
+    if (isSelectionMode) {
+      endSelectionGesture();
+      return;
+    }
+
+    const touch = waveformTouchRef.current;
+    waveformTouchRef.current = null;
+    if (!touch || touch.moved || maxDuration <= 0) return;
+
+    const elapsed = Date.now() - touch.time;
+    if (elapsed > 300) return;
+
+    const pixelsPerSecond = plotWidth / maxDuration;
+    if (pixelsPerSecond <= 0) return;
+
+    const x = Math.max(0, Math.min(plotWidth, scrollXRef.current + e.nativeEvent.locationX));
+    const nextPosition = x / pixelsPerSecond;
+    void seekAll(nextPosition);
+  };
+
+  const handleSelectionLayerStart = (e: any) => {
+    beginSelectionGesture(e.nativeEvent.locationX);
+  };
+
+  const handleSelectionLayerMove = (e: any) => {
+    updateSelectionGesture(e.nativeEvent.locationX);
+  };
+
+  const handleSelectionLayerEnd = () => {
+    endSelectionGesture();
   };
 
   // Refs za sinhronizaciju fiksnog header-a (vremenska osa) sa horizontalnim
@@ -106,6 +292,25 @@ export default function EditorScreen() {
       headerScrollRef.current?.scrollTo({ x: playheadX, animated: false });
     }
   }, [positionSeconds, isPlayingAll, maxDuration, plotWidth]);
+
+  useEffect(() => {
+    const viewportWidth = viewportWidthRef.current;
+    if (viewportWidth === 0) return;
+
+    const maxScrollX = Math.max(0, canvasWidth - viewportWidth);
+    const nextScrollX = Math.min(scrollXRef.current, maxScrollX);
+    if (nextScrollX !== scrollXRef.current) {
+      scrollXRef.current = nextScrollX;
+      contentScrollRef.current?.scrollTo({ x: nextScrollX, animated: false });
+      headerScrollRef.current?.scrollTo({ x: nextScrollX, animated: false });
+    }
+  }, [canvasWidth]);
+
+  useEffect(() => {
+    if (!isSelectionMode) {
+      selectionGestureRef.current = null;
+    }
+  }, [isSelectionMode]);
 
   async function loadInitialTrack(filePath: string) {
     try {
@@ -195,31 +400,92 @@ export default function EditorScreen() {
               ref={contentScrollRef}
               horizontal
               showsHorizontalScrollIndicator={false}
+              scrollEnabled={!isSelectionMode}
               bounces={false}
               onScroll={handleContentScroll}
               scrollEventThrottle={16}
               onLayout={handleViewportLayout}
+              onTouchStart={handleWaveformTouchStart}
+              onTouchMove={handleWaveformTouchMove}
+              onTouchEnd={handleWaveformTouchEnd}
             >
-              <Canvas style={{ width: canvasWidth - AXIS_GUTTER, height: canvasHeight }}>
-                <Group clip={plotClipRect}>
-                  {trackLayouts.map((layout, idx) => (
-                    <Track
-                      key={layout.id}
-                      layout={layout}
-                      plotWidth={plotWidth}
-                      channelHeight={channelHeight}
-                      isLast={idx === trackLayouts.length - 1}
-                    />
-                  ))}
-                </Group>
+              <View style={{ width: canvasWidth - AXIS_GUTTER, height: canvasHeight, position: 'relative' }}>
+                <Canvas style={{ width: canvasWidth - AXIS_GUTTER, height: canvasHeight }}>
+                  <Group clip={plotClipRect}>
+                    {trackLayouts.map((layout, idx) => (
+                      <Track
+                        key={layout.id}
+                        layout={layout}
+                        plotWidth={plotWidth}
+                        channelHeight={channelHeight}
+                        isLast={idx === trackLayouts.length - 1}
+                      />
+                    ))}
+                  </Group>
 
-                <Playhead
-                  positionSeconds={positionSeconds}
-                  maxDurationSeconds={maxDuration}
-                  plotWidth={plotWidth}
-                  canvasHeight={canvasHeight}
-                />
-              </Canvas>
+                  <Playhead
+                    positionSeconds={positionSeconds}
+                    maxDurationSeconds={maxDuration}
+                    plotWidth={plotWidth}
+                    canvasHeight={canvasHeight}
+                  />
+                </Canvas>
+
+                {normalizedSelection && maxDuration > 0 && (
+                  <View
+                    pointerEvents="none"
+                    style={[
+                      styles.selectionHighlight,
+                      {
+                        left: timeToX(normalizedSelection.start),
+                        width: Math.max(1, timeToX(normalizedSelection.end) - timeToX(normalizedSelection.start)),
+                        height: canvasHeight,
+                      },
+                    ]}
+                  />
+                )}
+
+                {normalizedSelection && maxDuration > 0 && isSelectionMode && (
+                  <>
+                    <View
+                      pointerEvents="none"
+                      style={[
+                        styles.selectionHandle,
+                        {
+                          left: timeToX(normalizedSelection.start) - SELECTION_HANDLE_WIDTH / 2,
+                          height: canvasHeight,
+                        },
+                      ]}
+                    >
+                      <View style={styles.selectionHandleGrip} />
+                    </View>
+                    <View
+                      pointerEvents="none"
+                      style={[
+                        styles.selectionHandle,
+                        {
+                          left: timeToX(normalizedSelection.end) - SELECTION_HANDLE_WIDTH / 2,
+                          height: canvasHeight,
+                        },
+                      ]}
+                    >
+                      <View style={styles.selectionHandleGrip} />
+                    </View>
+                  </>
+                )}
+
+                {isSelectionMode && maxDuration > 0 && (
+                  <View
+                    style={styles.selectionGestureLayer}
+                    onStartShouldSetResponder={() => true}
+                    onMoveShouldSetResponder={() => true}
+                    onResponderGrant={handleSelectionLayerStart}
+                    onResponderMove={handleSelectionLayerMove}
+                    onResponderRelease={handleSelectionLayerEnd}
+                    onResponderTerminate={handleSelectionLayerEnd}
+                  />
+                )}
+              </View>
             </ScrollView>
 
             <TrackTitles
@@ -227,6 +493,8 @@ export default function EditorScreen() {
               canvasHeight={canvasHeight}
               isPlaying={isPlaying}
               onTogglePlay={handleTogglePlay}
+              isMuted={isMuted}
+              onToggleMute={handleToggleMute}
             />
           </View>
         </View>
@@ -234,10 +502,33 @@ export default function EditorScreen() {
         <Text style={styles.meta}>Trajanje: {maxDuration.toFixed(2)} s</Text>
         <Text style={styles.meta} numberOfLines={2}>Putanja: {initialPath ?? '-'}</Text>
 
+        <View style={styles.modeControls}>
+          <TouchableOpacity
+            style={[styles.modeButton, isSelectionMode && styles.modeButtonActive]}
+            onPress={handleSelectionToggle}
+            disabled={tracks.length === 0}
+          >
+            <Text style={styles.modeButtonText}>{isSelectionMode ? 'Select ON' : 'Select OFF'}</Text>
+          </TouchableOpacity>
+        </View>
+
+          <View style={styles.zoomControls}>
+            <TouchableOpacity style={styles.zoomButton} onPress={handleZoomOut} disabled={zoomFactor <= minVisualZoom}>
+              <Text style={styles.zoomButtonText}>Zoom Out</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.zoomButton} onPress={handleZoomIn} disabled={zoomFactor >= MAX_ZOOM}>
+              <Text style={styles.zoomButtonText}>Zoom In</Text>
+            </TouchableOpacity>
+          </View>
+
         <TouchableOpacity style={styles.playAllButton} onPress={handleToggleAll} disabled={tracks.length === 0}>
           <Text style={styles.playAllButtonText}>
             {isPlayingAll ? '⏸ Pauziraj sve' : '▶ Pokreni sve'}
           </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.stopAllButton} onPress={handleStopAll} disabled={tracks.length === 0}>
+          <Text style={styles.stopAllButtonText}>⏹ Stopiraj sve</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.addButton} onPress={pickAndAddTrack} disabled={isAddingTrack}>
@@ -256,6 +547,21 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f4f7fb', paddingTop: 28, paddingHorizontal: 5 },
   waveformStage: { backgroundColor: 'transparent', paddingVertical: 8 },
   meta: { marginTop: 14, marginHorizontal: 15, color: '#46607c', fontSize: 13 },
+  modeControls: {
+    marginTop: 10,
+    marginHorizontal: 15,
+  },
+  modeButton: {
+    backgroundColor: '#334155',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modeButtonActive: {
+    backgroundColor: '#0f766e',
+  },
+  modeButtonText: { color: '#ffffff', fontWeight: '600', fontSize: 15 },
   playAllButton: {
     marginTop: 8,
     marginHorizontal: 15,
@@ -266,6 +572,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   playAllButtonText: { color: '#ffffff', fontWeight: '600', fontSize: 15 },
+  zoomControls: {
+    marginTop: 10,
+    marginHorizontal: 15,
+    flexDirection: 'row',
+    gap: 10,
+  },
+  zoomButton: {
+    flex: 1,
+    backgroundColor: '#0f766e',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  zoomButtonText: { color: '#ffffff', fontWeight: '600', fontSize: 14 },
+  stopAllButton: {
+    marginTop: 10,
+    marginHorizontal: 15,
+    backgroundColor: '#b42318',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stopAllButtonText: { color: '#ffffff', fontWeight: '600', fontSize: 15 },
   addButton: {
     marginTop: 20,
     marginHorizontal: 15,
@@ -276,6 +607,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   addButtonText: { color: '#ffffff', fontWeight: '600', fontSize: 15 },
+  selectionHighlight: {
+    position: 'absolute',
+    top: 0,
+    backgroundColor: 'rgba(15, 118, 110, 0.18)',
+    borderColor: 'rgba(15, 118, 110, 0.55)',
+    borderWidth: 1,
+  },
+  selectionHandle: {
+    position: 'absolute',
+    top: 0,
+    width: SELECTION_HANDLE_WIDTH,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectionHandleGrip: {
+    width: 5,
+    height: '72%',
+    borderRadius: 3,
+    backgroundColor: '#0f766e',
+  },
+  selectionGestureLayer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'transparent',
+  },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f4f7fb', padding: 20 },
   loadingText: { marginTop: 12, color: '#17324d', fontSize: 15 },
   errorText: { color: '#b42318', fontSize: 16, textAlign: 'center' },

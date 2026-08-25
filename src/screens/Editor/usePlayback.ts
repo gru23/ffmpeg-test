@@ -8,6 +8,7 @@ export type PlayableTrack = { id: string; uri: string };
 // zatraži dati track, kreira Sound objekat; drugi ga samo ponovo koristi.
 export function usePlayback() {
   const soundsRef = useRef<Map<string, Audio.Sound>>(new Map());
+  const mutedIdsRef = useRef<Set<string>>(new Set());
   const [playingIds, setPlayingIds] = useState<Set<string>>(new Set());
 
   const [isPlayingAll, setIsPlayingAll] = useState(false);
@@ -64,6 +65,10 @@ export function usePlayback() {
     });
   }, []);
 
+  async function applyMuteState(sound: Audio.Sound, muted: boolean) {
+    await sound.setVolumeAsync(muted ? 0 : 1);
+  }
+
   async function getOrCreateSound(id: string, uri: string) {
     let sound = soundsRef.current.get(id);
     if (!sound) {
@@ -77,6 +82,7 @@ export function usePlayback() {
         }
       );
       sound = newSound;
+      await applyMuteState(sound, mutedIdsRef.current.has(id));
       soundsRef.current.set(id, sound);
     }
     return sound;
@@ -133,6 +139,45 @@ export function usePlayback() {
     await Promise.all(Array.from(soundsRef.current.values()).map((s) => s.pauseAsync().catch(() => {})));
   }, []);
 
+  const seekAll = useCallback(
+    async (nextPositionSeconds: number) => {
+      const clampedSeconds = Math.max(
+        0,
+        maxDurationRef.current > 0 ? Math.min(nextPositionSeconds, maxDurationRef.current) : nextPositionSeconds
+      );
+
+      positionRef.current = clampedSeconds;
+      setPositionSeconds(clampedSeconds);
+
+      if (!isPlayingAll) return;
+
+      stopTimer();
+      const seekMs = Math.round(clampedSeconds * 1000);
+
+      await Promise.all(
+        Array.from(soundsRef.current.values()).map(async (sound) => {
+          const status = await sound.getStatusAsync();
+          if (!status.isLoaded) return;
+          const clampedMs = Math.min(seekMs, status.durationMillis ?? seekMs);
+          await sound.setPositionAsync(clampedMs);
+        })
+      );
+
+      startTimer();
+    },
+    [isPlayingAll]
+  );
+
+  const stopAll = useCallback(async () => {
+    stopTimer();
+    setIsPlayingAll(false);
+    positionRef.current = 0;
+    setPositionSeconds(0);
+    setPlayingIds(new Set());
+
+    await Promise.all(Array.from(soundsRef.current.values()).map((s) => s.stopAsync().catch(() => {})));
+  }, []);
+
   const toggleAll = useCallback(
     async (tracksToPlay: PlayableTrack[], maxDurationSeconds: number) => {
       if (isPlayingAll) {
@@ -148,5 +193,19 @@ export function usePlayback() {
     [isPlayingAll, pauseAll, playAll]
   );
 
-  return { togglePlayback, isPlaying, toggleAll, isPlayingAll, positionSeconds };
+  const setTrackMuted = useCallback(async (id: string, uri: string, muted: boolean) => {
+    if (muted) {
+      mutedIdsRef.current.add(id);
+    } else {
+      mutedIdsRef.current.delete(id);
+    }
+
+    const sound = await getOrCreateSound(id, uri);
+    const status = await sound.getStatusAsync();
+    if (!status.isLoaded) return;
+
+    await applyMuteState(sound, muted);
+  }, []);
+
+  return { togglePlayback, isPlaying, toggleAll, stopAll, seekAll, isPlayingAll, positionSeconds, setTrackMuted };
 }
