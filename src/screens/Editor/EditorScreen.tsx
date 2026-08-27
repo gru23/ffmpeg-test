@@ -17,6 +17,10 @@ import * as ScreenOrientation from 'expo-screen-orientation';
 import * as DocumentPicker from 'expo-document-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useFocusEffect, useRoute } from '@react-navigation/native';
+import Slider from '@react-native-community/slider';
+
+import { applyEchoToSelection, applySilenceToSelection  } from './effects';
+
 
 import { RootStackParamList } from '../../../App';
 import { AXIS_GUTTER, TIME_AXIS_AREA, TrackData, TRACK_COLORS } from './types';
@@ -53,6 +57,12 @@ export default function EditorScreen() {
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [trackVolumes, setTrackVolumes] = useState<Record<string, number>>({});
   const [lastNonZeroVolumes, setLastNonZeroVolumes] = useState<Record<string, number>>({});
+
+  const [showEffectPanel, setShowEffectPanel] = useState(false);
+  const [effectDelayMs, setEffectDelayMs] = useState(300);
+  const [effectDecay, setEffectDecay] = useState(0.5);
+  const [effectType, setEffectType] = useState<'echo' | 'silence'>('echo');
+  const [isApplyingEffect, setIsApplyingEffect] = useState(false);
 
 
   const waveformTouchRef = useRef<{ x: number; y: number; time: number; moved: boolean } | null>(null);
@@ -193,6 +203,14 @@ export default function EditorScreen() {
     setSelectionEndTime(nextEnd);
   };
 
+  const clearSelection = () => {
+    setSelectionStartTime(null);
+    setSelectionEndTime(null);
+    setSelectedTrackId(null);
+    selectionGestureRef.current = null;
+    setShowEffectPanel(false);
+  };
+
   const beginSelectionGesture = (viewportX: number, viewportY: number) => {
     const touchedTrack = findTrackAtY(viewportY);
     if (!touchedTrack) return;
@@ -306,6 +324,41 @@ export default function EditorScreen() {
 
   const handleSelectionLayerEnd = () => {
     endSelectionGesture();
+  };
+
+  const handleApplyEffect = async () => {
+    if (!selectedTrackId || !normalizedSelection) return;
+    const track = tracks.find((t) => t.id === selectedTrackId);
+    if (!track) return;
+
+    setIsApplyingEffect(true);
+    try {
+      const newPath =
+        effectType === 'echo'
+          ? await applyEchoToSelection(
+              track.path,
+              normalizedSelection.start,
+              normalizedSelection.end,
+              track.duration,
+              { delayMs: effectDelayMs, decay: effectDecay }
+            )
+          : await applySilenceToSelection(track.path, normalizedSelection.start, normalizedSelection.end);
+
+
+      // Ponovo izvlačimo waveform/trajanje iz IZMENJENOG fajla - isti kod
+      // koji se koristi i pri prvom uvozu pesme.
+      const refreshed = await extractTrackData(newPath, `${track.title}.wav`);
+      setTracks((prev) =>
+        prev.map((t) => (t.id === track.id ? { ...t, ...refreshed, id: track.id } : t))
+      );
+
+      clearSelection();
+    } catch (err) {
+      console.error('Greška pri primjeni efekta:', err);
+      Alert.alert('Greška', 'Nije uspjela primjena efekta.');
+    } finally {
+      setIsApplyingEffect(false);
+    }
   };
 
   // Refs za sinhronizaciju fiksnog header-a (vremenska osa) sa horizontalnim
@@ -578,7 +631,100 @@ export default function EditorScreen() {
           >
             <Text style={styles.modeButtonText}>{isSelectionMode ? 'Select ON' : 'Select OFF'}</Text>
           </TouchableOpacity>
+
+          {normalizedSelection && (
+            <TouchableOpacity
+              style={[styles.modeButton, styles.clearSelectionButton]}
+              onPress={clearSelection}
+            >
+              <Text style={styles.modeButtonText}>✕ Ukloni selekciju</Text>
+            </TouchableOpacity>
+          )}
+          {normalizedSelection && !showEffectPanel && (
+            <TouchableOpacity
+              style={[styles.modeButton, styles.effectOpenButton]}
+              onPress={() => setShowEffectPanel(true)}
+            >
+              <Text style={styles.modeButtonText}>🎛 Dodaj efekat</Text>
+            </TouchableOpacity>
+          )}
         </View>
+
+        {showEffectPanel && normalizedSelection && (
+          <View style={styles.effectPanel}>
+            <View style={styles.effectTypeRow}>
+              <TouchableOpacity
+                style={[styles.effectTypeButton, effectType === 'echo' && styles.effectTypeButtonActive]}
+                onPress={() => setEffectType('echo')}
+              >
+                <Text style={styles.effectTypeButtonText}>Echo / Delay</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.effectTypeButton, effectType === 'silence' && styles.effectTypeButtonActive]}
+                onPress={() => setEffectType('silence')}
+              >
+                <Text style={styles.effectTypeButtonText}>Silence</Text>
+              </TouchableOpacity>
+            </View>
+
+            {effectType === 'echo' && (
+              <>
+                <View style={styles.effectRow}>
+                  <Text style={styles.effectLabel}>Kašnjenje: {Math.round(effectDelayMs)} ms</Text>
+                  <Slider
+                    style={styles.effectSlider}
+                    minimumValue={50}
+                    maximumValue={1000}
+                    step={10}
+                    value={effectDelayMs}
+                    onValueChange={setEffectDelayMs}
+                    minimumTrackTintColor="#1561bd"
+                    maximumTrackTintColor="#c7cfdb"
+                    thumbTintColor="#1561bd"
+                  />
+                </View>
+
+                <View style={styles.effectRow}>
+                  <Text style={styles.effectLabel}>Slabljenje odjeka: {effectDecay.toFixed(2)}</Text>
+                  <Slider
+                    style={styles.effectSlider}
+                    minimumValue={0.1}
+                    maximumValue={0.9}
+                    step={0.05}
+                    value={effectDecay}
+                    onValueChange={setEffectDecay}
+                    minimumTrackTintColor="#1561bd"
+                    maximumTrackTintColor="#c7cfdb"
+                    thumbTintColor="#1561bd"
+                  />
+                </View>
+              </>
+            )}
+
+            {effectType === 'silence' && (
+              <Text style={styles.effectSilenceNote}>
+                Selektovani dio signala biće potpuno utišan (ravna linija, nulti signal).
+              </Text>
+            )}
+
+            <View style={styles.effectButtonsRow}>
+              <TouchableOpacity
+                style={[styles.modeButton, styles.effectCancelButton]}
+                onPress={() => setShowEffectPanel(false)}
+                disabled={isApplyingEffect}
+              >
+                <Text style={styles.modeButtonText}>Otkaži</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modeButton, styles.effectApplyButton]}
+                onPress={handleApplyEffect}
+                disabled={isApplyingEffect}
+              >
+                {isApplyingEffect ? <ActivityIndicator size="small" color="#ffffff" /> : <Text style={styles.modeButtonText}>Primijeni</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
           <View style={styles.zoomControls}>
             <TouchableOpacity style={styles.zoomButton} onPress={handleZoomOut} disabled={zoomFactor <= minVisualZoom}>
@@ -618,8 +764,11 @@ const styles = StyleSheet.create({
   modeControls: {
     marginTop: 10,
     marginHorizontal: 15,
+    flexDirection: 'row',
+    gap: 10,
   },
   modeButton: {
+    flex: 1,
     backgroundColor: '#334155',
     borderRadius: 10,
     paddingVertical: 12,
@@ -702,4 +851,36 @@ const styles = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f4f7fb', padding: 20 },
   loadingText: { marginTop: 12, color: '#17324d', fontSize: 15 },
   errorText: { color: '#b42318', fontSize: 16, textAlign: 'center' },
+  clearSelectionButton: {
+    backgroundColor: '#7c2d12',
+    flex: 1,
+  },
+  effectOpenButton: { backgroundColor: '#0f766e', flex: 1 },
+  effectPanel: {
+    marginTop: 10,
+    marginHorizontal: 15,
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  effectPanelTitle: { fontSize: 14, fontWeight: '700', color: '#17324d', marginBottom: 8 },
+  effectRow: { marginBottom: 8 },
+  effectLabel: { fontSize: 12, color: '#46607c', marginBottom: 2 },
+  effectSlider: { width: '100%', height: 30 },
+  effectButtonsRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  effectCancelButton: { backgroundColor: '#334155', flex: 1 },
+  effectApplyButton: { backgroundColor: '#1561bd', flex: 1 },
+  effectTypeRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+  effectTypeButton: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#e2e8f0',
+    alignItems: 'center',
+  },
+  effectTypeButtonActive: { backgroundColor: '#1561bd' },
+  effectTypeButtonText: { color: '#17324d', fontWeight: '600', fontSize: 12 },
+  effectSilenceNote: { fontSize: 12, color: '#46607c', marginBottom: 8, fontStyle: 'italic' },
 });
